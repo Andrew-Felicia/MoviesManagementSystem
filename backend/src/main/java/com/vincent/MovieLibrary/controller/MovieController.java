@@ -1,5 +1,7 @@
 package com.vincent.MovieLibrary.controller;
 
+import com.vincent.MovieLibrary.dto.MovieRequest;
+import com.vincent.MovieLibrary.dto.MovieResponse;
 import com.vincent.MovieLibrary.entity.Movie;
 import com.vincent.MovieLibrary.repository.MovieRepository;
 import com.vincent.MovieLibrary.service.MovieService;
@@ -20,27 +22,31 @@ public class MovieController {
     }
 
     @GetMapping({"", "/"}) //make sure both /api/movies and /api/movies/ are working.
-    public List<Movie> getAllMovies() {
+    public List<MovieResponse> getAllMovies() {
         return movieService.getAllMovies();
     }
 
     @GetMapping("/{id}")
-    public Movie getMovieById(@PathVariable Integer id) {
+    public MovieResponse getMovieById(
+            @PathVariable Integer id
+    ) {
         return movieService.getMovieById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Movie createMovie(@Valid @RequestBody Movie movie) {
-        return movieService.createMovie(movie);
+    public MovieResponse createMovie(
+            @Valid @RequestBody MovieRequest request
+    ) {
+        return movieService.createMovie(request);
     }
 
     @PutMapping("/{id}")
-    public Movie updateMovie(
+    public MovieResponse updateMovie(
             @PathVariable Integer id,
-            @Valid @RequestBody Movie updatedMovie
+            @Valid @RequestBody MovieRequest request
     ) {
-        return movieService.updateMovie(id, updatedMovie);
+        return movieService.updateMovie(id, request);
     }
 
     @DeleteMapping("/{id}")
