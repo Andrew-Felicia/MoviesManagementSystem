@@ -3,6 +3,7 @@ package com.vincent.MovieLibrary.controller;
 import com.vincent.MovieLibrary.entity.Movie;
 import com.vincent.MovieLibrary.repository.MovieRepository;
 import com.vincent.MovieLibrary.service.MovieService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,14 +31,14 @@ public class MovieController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Movie createMovie(@RequestBody Movie movie) {
+    public Movie createMovie(@Valid @RequestBody Movie movie) {
         return movieService.createMovie(movie);
     }
 
     @PutMapping("/{id}")
     public Movie updateMovie(
             @PathVariable Integer id,
-            @RequestBody Movie updatedMovie
+            @Valid @RequestBody Movie updatedMovie
     ) {
         return movieService.updateMovie(id, updatedMovie);
     }
