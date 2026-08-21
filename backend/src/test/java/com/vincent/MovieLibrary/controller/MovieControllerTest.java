@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -192,6 +193,74 @@ class MovieControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(movieService, never()).createMovie(any());
+    }
+
+    @Test
+    void nonNumericMovieIdReturns400() throws Exception {
+        mockMvc.perform(get("/api/movies/not-a-number"))
+                .andExpect(status().isBadRequest());
+
+        verify(movieService, never()).getMovieById(any());
+    }
+
+    @Test
+    void unsupportedHttpMethodReturns405() throws Exception {
+        mockMvc.perform(patch("/api/movies/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_REQUEST_JSON))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void requestWithoutJsonContentTypeReturns415() throws Exception {
+        mockMvc.perform(post("/api/movies").content(VALID_REQUEST_JSON))
+                .andExpect(status().isUnsupportedMediaType());
+
+        verify(movieService, never()).createMovie(any());
+    }
+
+    @Test
+    void optionalNullFieldsAreAccepted() throws Exception {
+        String requestJson = """
+                {
+                  "title": "Unrated",
+                  "releaseYear": 2026,
+                  "director": "Director",
+                  "genre": "Drama",
+                  "runtimeMinutes": 90,
+                  "language": "English",
+                  "watched": false,
+                  "personalRating": null,
+                  "filePath": "/movies/unrated.mkv",
+                  "notes": null
+                }
+                """;
+        when(movieService.createMovie(any(MovieRequest.class)))
+                .thenReturn(new MovieResponse(
+                        12, "Unrated", 2026, "Director", "Drama", 90,
+                        "English", false, null, "/movies/unrated.mkv",
+                        null, null));
+
+        mockMvc.perform(post("/api/movies")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.personalRating").doesNotExist())
+                .andExpect(jsonPath("$.notes").doesNotExist());
+
+        verify(movieService).createMovie(any(MovieRequest.class));
+    }
+
+    @Test
+    void invalidUpdateDoesNotCallService() throws Exception {
+        mockMvc.perform(put("/api/movies/3")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.title")
+                        .value("Title is required"));
+
+        verify(movieService, never()).updateMovie(any(), any());
     }
 
     private static MovieRequest validRequest() {
