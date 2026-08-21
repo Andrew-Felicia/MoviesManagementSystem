@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+**/.idea
+**/node_modules
+**/dist
+**/coverage
+**/target
+**/.DS_Store
+README.md
