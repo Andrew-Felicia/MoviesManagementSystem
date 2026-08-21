@@ -51,13 +51,25 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      - name: Build and test
+      - name: Run unit, stress, integration, and coverage verification
         run: ./mvnw --batch-mode --no-transfer-progress verify
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/movie_library
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: ci-password
           SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-and-coverage-reports-${{ github.run_attempt }}
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+            backend/target/site/jacoco/
+          if-no-files-found: warn
+          retention-days: 14
 
   publish-image:
     name: Publish container image
