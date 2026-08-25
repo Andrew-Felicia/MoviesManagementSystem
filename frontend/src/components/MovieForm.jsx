@@ -49,7 +49,7 @@ export default function MovieForm({ movie, saving, serverErrors, onClose, onSave
       releaseYear: Number(values.releaseYear),
       runtimeMinutes: Number(values.runtimeMinutes),
       personalRating: values.personalRating === '' ? null : Number(values.personalRating),
-      notes: values.notes.trim() || null,
+      notes: values.notes?.trim() || null,
     })
   }
 

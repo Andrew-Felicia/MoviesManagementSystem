@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Film, Library, Plus, RefreshCw, Search, SlidersHorizontal, Star, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Film, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, X } from 'lucide-react'
+import { authApi } from './api/auth'
 import { movieApi } from './api/movies'
 import { BrandMark } from './components/Icons'
+import LoginPage from './components/LoginPage'
 import MovieForm from './components/MovieForm'
 import MovieTable from './components/MovieTable'
+import WaveText from './components/WaveText'
 
 function ConfirmDialog({ movie, busy, onCancel, onConfirm }) {
   return (
@@ -26,6 +29,10 @@ function LoadingRows() {
 }
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [signingIn, setSigningIn] = useState(false)
+  const [loginError, setLoginError] = useState('')
   const [movies, setMovies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -48,14 +55,33 @@ export default function App() {
     try {
       const data = await movieApi.list()
       setMovies(data)
-    } catch {
+    } catch (requestError) {
+      if (requestError.status === 401) {
+        setCurrentUser(null)
+        return
+      }
       setError('The movie service is not available. Start the backend and try again.')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadMovies() }, [loadMovies])
+  useEffect(() => {
+    authApi.me()
+      .then(setCurrentUser)
+      .catch((requestError) => {
+        if (requestError.status !== 401) setLoginError('The authentication service is not available.')
+      })
+      .finally(() => setAuthLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (currentUser) loadMovies()
+    else if (!authLoading) {
+      setMovies([])
+      setLoading(false)
+    }
+  }, [authLoading, currentUser, loadMovies])
   useEffect(() => {
     if (!toast) return undefined
     const timer = window.setTimeout(() => setToast(''), 2600)
@@ -114,6 +140,42 @@ export default function App() {
     }
   }
 
+  async function login(username, password) {
+    setSigningIn(true)
+    setLoginError('')
+    try {
+      setCurrentUser(await authApi.login(username, password))
+    } catch (requestError) {
+      setLoginError(requestError.message)
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  async function register(username, passcode) {
+    setSigningIn(true)
+    setLoginError('')
+    try {
+      await authApi.register(username, passcode)
+      return true
+    } catch (requestError) {
+      setLoginError(requestError.message)
+      return false
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  async function logout() {
+    try {
+      await authApi.logout()
+      setCurrentUser(null)
+      setMovies([])
+    } catch (requestError) {
+      setToast(requestError.message)
+    }
+  }
+
   async function toggleWatched(movie) {
     try {
       const saved = await movieApi.update(movie.id, { ...movie, watched: !movie.watched, createdAt: undefined, id: undefined })
@@ -140,6 +202,14 @@ export default function App() {
 
   const hasFilters = query || genre !== 'All genres' || status !== 'All movies'
 
+  if (authLoading) {
+    return <div className="auth-splash"><BrandMark /><span>FRAMEBASE</span><small>Checking your session…</small></div>
+  }
+
+  if (!currentUser) {
+    return <LoginPage busy={signingIn} error={loginError} onClearError={() => setLoginError('')} onLogin={login} onRegister={register} />
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -149,14 +219,17 @@ export default function App() {
           <a href="#stats"><BarChart3 size={15} />Overview</a>
         </nav>
         <button className="button button-primary top-add" type="button" onClick={openNew}><Plus size={16} />Add movie</button>
+        <div className="account-chip"><span><ShieldCheck size={14} /></span><div><strong>{currentUser.username}</strong><small>{currentUser.role}</small></div></div>
+        <button className="logout-button" type="button" onClick={logout} aria-label="Sign out"><LogOut size={17} /><span>Sign out</span></button>
         <button className="mobile-menu" type="button" onClick={openNew} aria-label="Add movie"><Plus size={21} /></button>
+        <button className="mobile-logout" type="button" onClick={logout} aria-label="Sign out"><LogOut size={19} /></button>
       </header>
 
       <main>
         <section className="hero-strip" id="catalog">
           <div>
             <span className="eyebrow">Your private screening room</span>
-            <h1>Find the right film<br /><em>without the scroll.</em></h1>
+            <h1>Find the right film<br /><em><WaveText text="without the scroll." /></em></h1>
             <p>A clean index of every title you own, what you have watched, and what deserves the next evening.</p>
           </div>
           <div className="hero-reel" aria-hidden="true"><Clapperboard size={44} /><span>{movies.length.toString().padStart(3, '0')}</span><small>titles indexed</small></div>

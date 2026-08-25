@@ -1,9 +1,15 @@
+import { getCsrfHeader } from './auth'
+
 const API_URL = import.meta.env.VITE_API_URL || '/api/movies'
 
 async function request(path = '', options = {}) {
+  const method = options.method || 'GET'
+  const csrfHeader = ['GET', 'HEAD', 'OPTIONS'].includes(method) ? {} : await getCsrfHeader()
   const response = await fetch(`${API_URL}${path}`, {
+    credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
+      ...csrfHeader,
       ...options.headers,
     },
     ...options,
