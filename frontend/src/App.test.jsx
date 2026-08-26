@@ -22,6 +22,11 @@ function mockAuthenticated(...movieResponses) {
   }))
 }
 
+async function openLoginDialog() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Login' }))
+  return screen.findByRole('dialog', { name: 'Welcome back' })
+}
+
 afterEach(() => vi.restoreAllMocks())
 
 describe('App', () => {
@@ -43,7 +48,9 @@ describe('App', () => {
   it('shows the login page when no session exists', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'Authentication required' }, 401)))
     render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Login' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Username')).not.toBeInTheDocument()
+    await openLoginDialog()
     expect(screen.getByLabelText('Username')).toHaveValue('admin')
     expect(screen.getByRole('button', { name: 'Enter library' })).toBeDisabled()
   })
@@ -61,7 +68,7 @@ describe('App', () => {
     }))
 
     render(<App />)
-    await screen.findByRole('heading', { name: 'Welcome back' })
+    await openLoginDialog()
     await userEvent.type(screen.getByLabelText('Password'), 'admin')
     await userEvent.click(screen.getByRole('button', { name: 'Enter library' }))
     expect((await screen.findAllByText('Arrival')).length).toBeGreaterThan(0)
@@ -75,7 +82,7 @@ describe('App', () => {
       return Promise.resolve(response({ error: 'Invalid username or password' }, 401))
     }))
     render(<App />)
-    await screen.findByRole('heading', { name: 'Welcome back' })
+    await openLoginDialog()
     await userEvent.type(screen.getByLabelText('Password'), 'wrong')
     await userEvent.click(screen.getByRole('button', { name: 'Enter library' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid username or password')
@@ -94,7 +101,7 @@ describe('App', () => {
     }))
 
     render(<App />)
-    await screen.findByRole('heading', { name: 'Welcome back' })
+    await openLoginDialog()
     await userEvent.click(screen.getByRole('button', { name: 'Create an account' }))
     await userEvent.type(screen.getByLabelText('Username'), 'filmfan')
     await userEvent.type(screen.getByLabelText('Passcode'), 'safe-passcode')
@@ -114,7 +121,7 @@ describe('App', () => {
     }))
 
     render(<App />)
-    await screen.findByRole('heading', { name: 'Welcome back' })
+    await openLoginDialog()
     await userEvent.click(screen.getByRole('button', { name: 'Create an account' }))
     await userEvent.type(screen.getByLabelText('Username'), 'admin')
     await userEvent.type(screen.getByLabelText('Passcode'), 'safe-passcode')
@@ -130,7 +137,8 @@ describe('App', () => {
     render(<App />)
     await screen.findAllByText('Arrival')
     await userEvent.click(screen.getAllByRole('button', { name: 'Sign out' })[0])
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Login' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
   })
 
@@ -168,7 +176,8 @@ describe('App', () => {
   it('returns to login if the movie session expires', async () => {
     mockAuthenticated(response({ error: 'Authentication required' }, 401))
     render(<App />)
-    expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Login' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('adds a valid movie through the form', async () => {

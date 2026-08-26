@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, X } from 'lucide-react'
 import { BrandMark } from './Icons'
 import WaveText from './WaveText'
 
 export default function LoginPage({ busy, error, onClearError = () => {}, onLogin, onRegister }) {
+  const [panelOpen, setPanelOpen] = useState(false)
   const [mode, setMode] = useState('login')
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
@@ -52,10 +53,15 @@ export default function LoginPage({ busy, error, onClearError = () => {}, onLogi
   return (
     <main className="login-page">
       <section className="login-story">
-        <a className="brand login-brand" href="/" aria-label="Framebase home">
-          <BrandMark />
-          <span><strong>FRAMEBASE</strong><small>Personal movie index</small></span>
-        </a>
+        <header className="login-topbar">
+          <a className="brand login-brand" href="/" aria-label="Framebase home">
+            <BrandMark />
+            <span><strong>FRAMEBASE</strong><small>Personal movie index</small></span>
+          </a>
+          <button className="button button-primary login-nav-button" type="button" onClick={() => setPanelOpen(true)}>
+            <LockKeyhole size={15} />Login
+          </button>
+        </header>
         <div className="login-copy">
           <span className="eyebrow">Private collection access</span>
           <h1><WaveText text="Manage." /><br /><em><WaveText text="Your films." /></em></h1>
@@ -68,41 +74,44 @@ export default function LoginPage({ busy, error, onClearError = () => {}, onLogi
         <div className="login-frame" aria-hidden="true"><span>24</span><small>frames / second</small></div>
       </section>
 
-      <section className="login-panel">
-        <div className="login-card">
-          <div className="login-lock"><LockKeyhole size={22} /></div>
-          <span className="eyebrow">{registering ? 'New member access' : 'Secure member portal'}</span>
-          <h2>{registering ? 'Create account' : 'Welcome back'}</h2>
-          <p className="login-intro">{registering ? 'Choose a username and passcode for your library access.' : 'Sign in to continue to the movie library.'}</p>
+      {panelOpen && <div className="login-modal-backdrop">
+        <section className="login-panel" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
+          <button className="login-close" type="button" onClick={() => setPanelOpen(false)} aria-label="Close login"><X size={18} /></button>
+          <div className="login-card">
+            <div className="login-lock"><LockKeyhole size={22} /></div>
+            <span className="eyebrow">{registering ? 'New member access' : 'Secure member portal'}</span>
+            <h2 id="login-dialog-title">{registering ? 'Create account' : 'Welcome back'}</h2>
+            <p className="login-intro">{registering ? 'Choose a username and passcode for your library access.' : 'Sign in to continue to the movie library.'}</p>
 
-          <form className="login-form" onSubmit={submit}>
-            <label>
-              <span>Username</span>
-              <div className="login-input"><KeyRound size={16} /><input aria-label="Username" name="username" autoComplete="username" minLength={registering ? 3 : undefined} maxLength={50} pattern={registering ? '[A-Za-z0-9._-]+' : undefined} value={username} onChange={(event) => setUsername(event.target.value)} /></div>
-            </label>
-            <label>
-              <span>{registering ? 'Passcode' : 'Password'}</span>
-              <div className="login-input"><LockKeyhole size={16} /><input aria-label={registering ? 'Passcode' : 'Password'} name="password" type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /><button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
-            </label>
+            <form className="login-form" onSubmit={submit}>
+              <label>
+                <span>Username</span>
+                <div className="login-input"><KeyRound size={16} /><input aria-label="Username" name="username" autoComplete="username" minLength={registering ? 3 : undefined} maxLength={50} pattern={registering ? '[A-Za-z0-9._-]+' : undefined} value={username} onChange={(event) => setUsername(event.target.value)} /></div>
+              </label>
+              <label>
+                <span>{registering ? 'Passcode' : 'Password'}</span>
+                <div className="login-input"><LockKeyhole size={16} /><input aria-label={registering ? 'Passcode' : 'Password'} name="password" type={showPassword ? 'text' : 'password'} autoComplete={registering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /><button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div>
+              </label>
 
-            {registering && <label>
-              <span>Confirm passcode</span>
-              <div className="login-input"><ShieldCheck size={16} /><input aria-label="Confirm passcode" name="confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
-            </label>}
+              {registering && <label>
+                <span>Confirm passcode</span>
+                <div className="login-input"><ShieldCheck size={16} /><input aria-label="Confirm passcode" name="confirmation" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
+              </label>}
 
-            {(formError || error) && <div className="login-error" role="alert">{formError || error}</div>}
-            {success && <div className="login-success" role="status">{success}</div>}
+              {(formError || error) && <div className="login-error" role="alert">{formError || error}</div>}
+              {success && <div className="login-success" role="status">{success}</div>}
 
-            <button className="button button-primary login-submit" type="submit" disabled={busy || !username.trim() || !password || (registering && !confirmation)}>{busy ? (registering ? 'Creating…' : 'Verifying…') : (registering ? 'Create my account' : 'Enter library')}</button>
-          </form>
+              <button className="button button-primary login-submit" type="submit" disabled={busy || !username.trim() || !password || (registering && !confirmation)}>{busy ? (registering ? 'Creating…' : 'Verifying…') : (registering ? 'Create my account' : 'Enter library')}</button>
+            </form>
 
-          <div className="login-switch">
-            <span>{registering ? 'Already have an account?' : 'New to Framebase?'}</span>
-            <button type="button" onClick={() => changeMode(registering ? 'login' : 'register')}>{registering ? 'Back to sign in' : 'Create an account'}</button>
+            <div className="login-switch">
+              <span>{registering ? 'Already have an account?' : 'New to Framebase?'}</span>
+              <button type="button" onClick={() => changeMode(registering ? 'login' : 'register')}>{registering ? 'Back to sign in' : 'Create an account'}</button>
+            </div>
+            <p className="login-help">Passcodes are securely hashed and never stored as readable text.</p>
           </div>
-          <p className="login-help">Passcodes are securely hashed and never stored as readable text.</p>
-        </div>
-      </section>
+        </section>
+      </div>}
     </main>
   )
 }
