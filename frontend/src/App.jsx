@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Film, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Film, KeyRound, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, X } from 'lucide-react'
 import { authApi } from './api/auth'
 import { movieApi } from './api/movies'
 import { BrandMark } from './components/Icons'
 import LoginPage from './components/LoginPage'
 import MovieForm from './components/MovieForm'
 import MovieTable from './components/MovieTable'
+import PasswordChangeDialog from './components/PasswordChangeDialog'
 import WaveText from './components/WaveText'
 
 function ConfirmDialog({ movie, busy, onCancel, onConfirm }) {
@@ -48,6 +49,9 @@ export default function App() {
   const [deleteMovie, setDeleteMovie] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [toast, setToast] = useState('')
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   const loadMovies = useCallback(async () => {
     setLoading(true)
@@ -176,6 +180,22 @@ export default function App() {
     }
   }
 
+  async function changePassword(currentPasscode, newPasscode) {
+    setChangingPassword(true)
+    setPasswordError('')
+    try {
+      await authApi.changePassword(currentPasscode, newPasscode)
+      setPasswordDialogOpen(false)
+      setToast('Passcode updated')
+      return true
+    } catch (requestError) {
+      setPasswordError(requestError.message)
+      return false
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
   async function toggleWatched(movie) {
     try {
       const saved = await movieApi.update(movie.id, { ...movie, watched: !movie.watched, createdAt: undefined, id: undefined })
@@ -220,6 +240,7 @@ export default function App() {
         </nav>
         <button className="button button-primary top-add" type="button" onClick={openNew}><Plus size={16} />Add movie</button>
         <div className="account-chip"><span><ShieldCheck size={14} /></span><div><strong>{currentUser.username}</strong><small>{currentUser.role}</small></div></div>
+        <button className="passcode-button" type="button" onClick={() => { setPasswordError(''); setPasswordDialogOpen(true) }} aria-label="Change passcode"><KeyRound size={16} /><span>Passcode</span></button>
         <button className="logout-button" type="button" onClick={logout} aria-label="Sign out"><LogOut size={17} /><span>Sign out</span></button>
         <button className="mobile-menu" type="button" onClick={openNew} aria-label="Add movie"><Plus size={21} /></button>
         <button className="mobile-logout" type="button" onClick={logout} aria-label="Sign out"><LogOut size={19} /></button>
@@ -229,7 +250,7 @@ export default function App() {
         <section className="hero-strip" id="catalog">
           <div>
             <span className="eyebrow">Your private screening room</span>
-            <h1>Find the right film<br /><em><WaveText text="without the scroll." /></em></h1>
+                <h1>Find the right film<br /><em>without the scroll.</em></h1>
             <p>A clean index of every title you own, what you have watched, and what deserves the next evening.</p>
           </div>
           <div className="hero-reel" aria-hidden="true"><Clapperboard size={44} /><span>{movies.length.toString().padStart(3, '0')}</span><small>titles indexed</small></div>
@@ -264,6 +285,7 @@ export default function App() {
       <footer className="site-footer"><BrandMark /><span>FRAMEBASE</span><p>Your collection. Your ratings. Your next movie.</p><small>Local-first catalog · Built for movie nights</small></footer>
 
       {formOpen && <MovieForm movie={formMovie} saving={saving} serverErrors={serverErrors} onClose={() => setFormOpen(false)} onSave={saveMovie} />}
+      {passwordDialogOpen && <PasswordChangeDialog busy={changingPassword} error={passwordError} onClose={() => setPasswordDialogOpen(false)} onSave={changePassword} />}
       {deleteMovie && <ConfirmDialog movie={deleteMovie} busy={deleting} onCancel={() => setDeleteMovie(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check size={16} />{toast}</div>}
     </div>

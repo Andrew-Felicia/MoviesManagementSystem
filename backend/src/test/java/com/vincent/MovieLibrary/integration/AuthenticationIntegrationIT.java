@@ -23,6 +23,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -234,5 +235,58 @@ class AuthenticationIntegrationIT {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation failed"));
+    }
+
+    @Test
+    void authenticatedUserCanChangePasscodeAndInvalidChangesAreRejected() throws Exception {
+        UserAccount administrator = userAccountRepository.findByUsernameIgnoreCase("admin").orElseThrow();
+        String originalHash = administrator.getPasswordHash();
+
+        try {
+            mockMvc.perform(put("/api/auth/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"currentPasscode":"admin","newPasscode":"unique-local-passcode"}
+                                    """))
+                    .andExpect(status().isNoContent());
+            String changedHash = userAccountRepository.findByUsernameIgnoreCase("admin").orElseThrow().getPasswordHash();
+            assertThat(passwordEncoder.matches("unique-local-passcode", changedHash)).isTrue();
+
+            mockMvc.perform(put("/api/auth/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"currentPasscode":"wrong","newPasscode":"another"}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Current passcode is incorrect"));
+
+            mockMvc.perform(put("/api/auth/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"currentPasscode":"unique-local-passcode","newPasscode":"unique-local-passcode"}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("New passcode must be different"));
+
+            mockMvc.perform(put("/api/auth/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"currentPasscode":"","newPasscode":""}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors.currentPasscode").exists())
+                    .andExpect(jsonPath("$.fieldErrors.newPasscode").exists());
+        } finally {
+            administrator.setPasswordHash(originalHash);
+            userAccountRepository.saveAndFlush(administrator);
+        }
     }
 }

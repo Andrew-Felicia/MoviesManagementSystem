@@ -1,6 +1,7 @@
 package com.vincent.MovieLibrary.controller;
 
 import com.vincent.MovieLibrary.dto.AuthResponse;
+import com.vincent.MovieLibrary.dto.PasswordChangeRequest;
 import com.vincent.MovieLibrary.dto.RegistrationRequest;
 import com.vincent.MovieLibrary.service.RegistrationService;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,16 @@ class AuthControllerTest {
 
         assertThat(controller.register(request)).isEqualTo(expected);
         verify(registrationService).register(request);
+    }
+
+    @Test
+    void changePasswordDelegatesAuthenticatedUsernameToService() {
+        PasswordChangeRequest request = new PasswordChangeRequest("old", "new");
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken("admin", "unused");
+
+        controller.changePassword(authentication, request);
+
+        verify(registrationService).changePassword("admin", request);
     }
 
     @Test

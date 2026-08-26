@@ -81,6 +81,27 @@ describe('authApi', () => {
     await expect(authApi.register('admin', 'safe-passcode')).rejects.toThrow('Username is already registered')
   })
 
+  it('changes the authenticated passcode using JSON and CSRF', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => url.endsWith('/csrf')
+      ? Promise.resolve(response({ token: 'csrf-token' }))
+      : Promise.resolve(response(null, 204))))
+
+    await expect(authApi.changePassword('admin', 'unique-passcode')).resolves.toBeUndefined()
+    expect(fetch).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
+      body: JSON.stringify({ currentPasscode: 'admin', newPasscode: 'unique-passcode' }),
+    }))
+  })
+
+  it('reports a rejected passcode change', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => url.endsWith('/csrf')
+      ? Promise.resolve(response({ token: 'csrf-token' }))
+      : Promise.resolve(response({ error: 'Current passcode is incorrect' }, 400))))
+
+    await expect(authApi.changePassword('wrong', 'new')).rejects.toThrow('Current passcode is incorrect')
+  })
+
   it('falls back when an error response is not JSON', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, json: () => Promise.reject(new Error('not JSON')) }))
     await expect(authApi.me()).rejects.toMatchObject({ message: 'Authentication required', status: 503 })

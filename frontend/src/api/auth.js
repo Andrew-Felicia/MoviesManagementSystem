@@ -61,6 +61,18 @@ export const authApi = {
     return response.json()
   },
 
+  async changePassword(currentPasscode, newPasscode) {
+    const response = await fetch(`${AUTH_URL}/password`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...await getCsrfHeader() },
+      body: JSON.stringify({ currentPasscode, newPasscode }),
+    })
+    if (!response.ok) {
+      throw new Error(await readError(response, 'Could not change passcode'))
+    }
+  },
+
   async logout() {
     const response = await fetch(`${AUTH_URL}/logout`, {
       method: 'POST',

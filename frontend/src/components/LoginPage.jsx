@@ -63,14 +63,14 @@ export default function LoginPage({ busy, error, onClearError = () => {}, onLogi
           </button>
         </header>
         <div className="login-copy">
-          <span className="eyebrow">Private collection access</span>
-          <h1><WaveText text="Manage." /><br /><em><WaveText text="Your films." /></em></h1>
-          <p>One secure doorway to your catalog, ratings, watch history, and every movie night ahead.</p>
+{/*           <span className="eyebrow">Private collection access</span> */}
+          <h1><WaveText text="Manage." /><br /><em> </em><br /><em><WaveText text="     Your films." /></em></h1>
+{/*           <p>One secure doorway to your catalog, ratings, watch history, and every movie night ahead.</p> */}
         </div>
-        <div className="login-security-note">
-          <ShieldCheck size={18} />
-          <span><strong>Session protected</strong><small>Credentials are verified on the server</small></span>
-        </div>
+{/*         <div className="login-security-note"> */}
+{/*           <ShieldCheck size={18} /> */}
+{/*           <span><strong>Session protected</strong><small>Credentials are verified on the server</small></span> */}
+{/*         </div> */}
         <div className="login-frame" aria-hidden="true"><span>24</span><small>frames / second</small></div>
       </section>
 

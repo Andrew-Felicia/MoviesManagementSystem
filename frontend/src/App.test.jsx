@@ -45,6 +45,21 @@ describe('App', () => {
     expect(screen.getByText('admin')).toBeInTheDocument()
   })
 
+  it('changes the authenticated account passcode', async () => {
+    mockAuthenticated(response(movies), response(null, 204))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Change passcode' }))
+    await userEvent.type(screen.getByLabelText('Current passcode'), 'admin')
+    await userEvent.type(screen.getByLabelText('New passcode'), 'unique-passcode')
+    await userEvent.type(screen.getByLabelText('Confirm new passcode'), 'unique-passcode')
+    await userEvent.click(screen.getByRole('button', { name: 'Update passcode' }))
+
+    expect(await screen.findByText('Passcode updated')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Change passcode' })).not.toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ method: 'PUT' }))
+  })
+
   it('shows the login page when no session exists', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'Authentication required' }, 401)))
     render(<App />)
