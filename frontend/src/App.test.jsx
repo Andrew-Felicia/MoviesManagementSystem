@@ -90,6 +90,26 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({ method: 'POST' }))
   })
 
+  it('keeps Chinese selected after login and translates the library', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/api/auth/me') return Promise.resolve(response({ error: 'Authentication required' }, 401))
+      if (url === '/api/auth/csrf') return Promise.resolve(response({ token: 'csrf-token', headerName: 'X-XSRF-TOKEN' }))
+      if (url === '/api/auth/login') return Promise.resolve(response(admin))
+      return Promise.resolve(response(movies))
+    }))
+
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Switch to Chinese' }))
+    await userEvent.click(screen.getByRole('button', { name: '登录' }))
+    await userEvent.type(screen.getByLabelText('密码'), 'admin')
+    await userEvent.click(screen.getByRole('button', { name: '进入片库' }))
+
+    expect(await screen.findByRole('heading', { name: '我的片库' })).toBeInTheDocument()
+    expect(screen.getByLabelText('搜索片库')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '切换到英文' })).toBeInTheDocument()
+    expect(screen.getAllByText('已观看').length).toBeGreaterThan(0)
+  })
+
   it('shows invalid credentials returned by the server', async () => {
     vi.stubGlobal('fetch', vi.fn((url) => {
       if (url === '/api/auth/me') return Promise.resolve(response({ error: 'Authentication required' }, 401))

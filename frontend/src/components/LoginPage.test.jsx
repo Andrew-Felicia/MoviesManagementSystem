@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import LoginPage from './LoginPage'
 
@@ -12,10 +13,45 @@ describe('LoginPage', () => {
   it('shows the full landing page and keeps the login form hidden initially', async () => {
     render(<LoginPage busy={false} error="" onLogin={vi.fn()} />)
 
-    expect(screen.getByText('Private collection access')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Scroll to explore Framebase' })).toHaveAttribute('href', '#organize')
+    expect(screen.getByRole('heading', { name: /Everything worth watching/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Less searching/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your films are waiting.' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Metropolis/ })).toHaveAttribute('src', '/posters/metropolis-1927.jpg')
+    expect(screen.getByRole('img', { name: /The General/ })).toHaveAttribute('src', '/posters/the-general-1926.png')
+    expect(screen.getByRole('img', { name: /Caligari/ })).toHaveAttribute('src', '/posters/caligari-1920.jpg')
     expect(screen.queryByLabelText('Username')).not.toBeInTheDocument()
     await openLogin()
     expect(screen.getByLabelText('Username')).toHaveValue('admin')
+  })
+
+  it('switches the landing page and login dialog between English and Chinese', async () => {
+    function BilingualLoginPage() {
+      const [language, setLanguage] = useState('en')
+      return <LoginPage busy={false} error="" language={language} onLanguageChange={setLanguage} onLogin={vi.fn()} />
+    }
+    render(<BilingualLoginPage />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to Chinese' }))
+    expect(document.querySelector('.login-page')).toHaveAttribute('lang', 'zh-CN')
+    expect(screen.getByText('管理')).toBeInTheDocument()
+    expect(screen.getByText('你的电影')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '你的电影正在等你。' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '登录' }))
+    expect(await screen.findByRole('dialog', { name: '欢迎回来' })).toBeInTheDocument()
+    expect(screen.getByLabelText('用户名')).toHaveValue('admin')
+    expect(screen.getByRole('button', { name: '进入片库' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: '切换到英文' }))
+    expect(screen.getByRole('dialog', { name: 'Welcome back' })).toBeInTheDocument()
+  })
+
+  it('opens the login dialog from the lower page call to action', async () => {
+    render(<LoginPage busy={false} error="" onLogin={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Open Framebase' }))
+    expect(await screen.findByRole('dialog', { name: 'Welcome back' })).toBeInTheDocument()
   })
 
   it('submits trimmed administrator credentials', async () => {
