@@ -1,5 +1,7 @@
 package com.vincent.MovieLibrary.service;
 
+import com.vincent.MovieLibrary.dto.MovieBatchRequest;
+import com.vincent.MovieLibrary.dto.MovieBatchResponse;
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.dto.MovieResponse;
 import com.vincent.MovieLibrary.entity.Movie;
@@ -108,6 +110,56 @@ class MovieServiceTest {
 
         assertThat(result.personalRating()).isNull();
         assertThat(result.notes()).isNull();
+    }
+
+    @Test
+    void createMoviesImportsUniqueRowsAndSkipsExistingAndBatchDuplicates() {
+        Movie existing = movie(1, "Blade Runner", 1982, true, 9.0);
+        existing.setFilePath("/movies/blade-runner.mkv");
+        MovieRequest existingDuplicate = request(
+                " blade runner ", 1982, true, 9.0, null);
+        existingDuplicate = new MovieRequest(
+                existingDuplicate.title(), existingDuplicate.releaseYear(),
+                existingDuplicate.director(), existingDuplicate.genre(),
+                existingDuplicate.runtimeMinutes(), existingDuplicate.language(),
+                existingDuplicate.watched(), existingDuplicate.personalRating(),
+                " /MOVIES/BLADE-RUNNER.MKV ", existingDuplicate.notes());
+        MovieRequest unique = request("Arrival", 2016, false, 8.8, "First contact");
+        MovieRequest repeatedUnique = request("ARRIVAL", 2016, false, 8.8, null);
+
+        when(movieRepository.findAll()).thenReturn(List.of(existing));
+        when(movieRepository.saveAll(any())).thenAnswer(invocation -> {
+            List<Movie> saved = invocation.getArgument(0);
+            saved.getFirst().setId(20);
+            return saved;
+        });
+
+        MovieBatchResponse result = movieService.createMovies(
+                new MovieBatchRequest(List.of(existingDuplicate, unique, repeatedUnique))
+        );
+
+        assertThat(result.importedCount()).isEqualTo(1);
+        assertThat(result.skippedDuplicates()).isEqualTo(2);
+        assertThat(result.movies()).extracting(MovieResponse::title)
+                .containsExactly("Arrival");
+        verify(movieRepository).saveAll(any());
+    }
+
+    @Test
+    void createMoviesSupportsABatchWithNoDuplicates() {
+        MovieRequest first = request("Arrival", 2016, false, null, null);
+        MovieRequest second = request("Dune", 2021, true, 8.9, "Epic");
+        when(movieRepository.findAll()).thenReturn(List.of());
+        when(movieRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MovieBatchResponse result = movieService.createMovies(
+                new MovieBatchRequest(List.of(first, second))
+        );
+
+        assertThat(result.importedCount()).isEqualTo(2);
+        assertThat(result.skippedDuplicates()).isZero();
+        assertThat(result.movies()).extracting(MovieResponse::title)
+                .containsExactly("Arrival", "Dune");
     }
 
     @Test

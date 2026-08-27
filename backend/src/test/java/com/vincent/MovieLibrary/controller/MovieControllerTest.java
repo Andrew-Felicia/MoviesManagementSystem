@@ -1,5 +1,7 @@
 package com.vincent.MovieLibrary.controller;
 
+import com.vincent.MovieLibrary.dto.MovieBatchRequest;
+import com.vincent.MovieLibrary.dto.MovieBatchResponse;
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.dto.MovieResponse;
 import com.vincent.MovieLibrary.exception.MovieNotFoundException;
@@ -114,6 +116,45 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.title").value("Interstellar"));
 
         verify(movieService).createMovie(expectedRequest);
+    }
+
+    @Test
+    void batchCreateReturnsImportSummary() throws Exception {
+        MovieBatchRequest request = new MovieBatchRequest(List.of(validRequest()));
+        when(movieService.createMovies(request)).thenReturn(
+                new MovieBatchResponse(1, 0, List.of(response(21, "Interstellar")))
+        );
+
+        mockMvc.perform(post("/api/movies/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"movies": [%s]}
+                                """.formatted(VALID_REQUEST_JSON)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.importedCount").value(1))
+                .andExpect(jsonPath("$.skippedDuplicates").value(0))
+                .andExpect(jsonPath("$.movies[0].title").value("Interstellar"));
+
+        verify(movieService).createMovies(request);
+    }
+
+    @Test
+    void batchCreateRejectsEmptyAndInvalidBatches() throws Exception {
+        mockMvc.perform(post("/api/movies/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"movies\": []}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.movies")
+                        .value("At least one movie is required"));
+
+        mockMvc.perform(post("/api/movies/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"movies\": [{}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors['movies[0].title']")
+                        .value("Title is required"));
+
+        verify(movieService, never()).createMovies(any());
     }
 
     @Test

@@ -29,6 +29,18 @@ describe('movieApi', () => {
     expect(fetch).toHaveBeenCalledWith('/api/movies', expect.objectContaining({ method: 'POST', body: JSON.stringify(movie), headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }) }))
   })
 
+  it('creates movies in one batch request', async () => {
+    const movies = [{ title: 'Arrival' }, { title: 'Heat' }]
+    mockRequest(response({ importedCount: 2, skippedDuplicates: 0, movies }, 201))
+
+    await expect(movieApi.createBatch(movies)).resolves.toMatchObject({ importedCount: 2 })
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ movies }),
+      headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }),
+    }))
+  })
+
   it('updates a movie with JSON', async () => {
     const movie = { title: 'Heat', watched: true }
     mockRequest(response({ id: 7, ...movie }))

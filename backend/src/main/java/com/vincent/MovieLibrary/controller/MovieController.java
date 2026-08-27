@@ -1,9 +1,9 @@
 package com.vincent.MovieLibrary.controller;
 
+import com.vincent.MovieLibrary.dto.MovieBatchRequest;
+import com.vincent.MovieLibrary.dto.MovieBatchResponse;
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.dto.MovieResponse;
-import com.vincent.MovieLibrary.entity.Movie;
-import com.vincent.MovieLibrary.repository.MovieRepository;
 import com.vincent.MovieLibrary.service.MovieService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -39,6 +39,14 @@ public class MovieController {
             @Valid @RequestBody MovieRequest request
     ) {
         return movieService.createMovie(request);
+    }
+
+    @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MovieBatchResponse createMovies(
+            @Valid @RequestBody MovieBatchRequest request
+    ) {
+        return movieService.createMovies(request);
     }
 
     @PutMapping("/{id}")

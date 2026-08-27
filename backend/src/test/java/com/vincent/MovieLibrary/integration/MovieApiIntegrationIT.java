@@ -147,4 +147,62 @@ class MovieApiIntegrationIT {
         org.assertj.core.api.Assertions.assertThat(saved.getPersonalRating()).isNull();
         org.assertj.core.api.Assertions.assertThat(saved.getNotes()).isNull();
     }
+
+    @Test
+    void batchImportPersistsUniqueMoviesAndReportsDuplicates() throws Exception {
+        String request = """
+                {
+                  "movies": [
+                    {
+                      "title": "Arrival",
+                      "releaseYear": 2016,
+                      "director": "Denis Villeneuve",
+                      "genre": "Science Fiction",
+                      "runtimeMinutes": 116,
+                      "language": "English",
+                      "watched": true,
+                      "personalRating": 9.0,
+                      "filePath": "/movies/arrival.mkv",
+                      "notes": "Imported from CSV"
+                    },
+                    {
+                      "title": " arrival ",
+                      "releaseYear": 2016,
+                      "director": "Denis Villeneuve",
+                      "genre": "Science Fiction",
+                      "runtimeMinutes": 116,
+                      "language": "English",
+                      "watched": true,
+                      "personalRating": 9.0,
+                      "filePath": " /MOVIES/ARRIVAL.MKV ",
+                      "notes": "Duplicate row"
+                    },
+                    {
+                      "title": "Spirited Away",
+                      "releaseYear": 2001,
+                      "director": "Hayao Miyazaki",
+                      "genre": "Animation",
+                      "runtimeMinutes": 125,
+                      "language": "Japanese",
+                      "watched": false,
+                      "personalRating": null,
+                      "filePath": "/movies/spirited-away.mkv",
+                      "notes": null
+                    }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(post("/api/movies/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.importedCount").value(2))
+                .andExpect(jsonPath("$.skippedDuplicates").value(1))
+                .andExpect(jsonPath("$.movies", hasSize(2)))
+                .andExpect(jsonPath("$.movies[0].title").value("Arrival"))
+                .andExpect(jsonPath("$.movies[1].title").value("Spirited Away"));
+
+        org.assertj.core.api.Assertions.assertThat(movieRepository.count()).isEqualTo(2);
+    }
 }

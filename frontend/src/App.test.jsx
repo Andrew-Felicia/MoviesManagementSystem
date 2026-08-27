@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { moviesToCsv } from './utils/movieCsv'
 
 const admin = { username: 'admin', role: 'ADMIN' }
 const movies = [
@@ -195,6 +196,55 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add to library' }))
     expect(screen.getByText('Enter a title.')).toBeInTheDocument()
     expect(screen.getByText('Enter a director.')).toBeInTheDocument()
+  })
+
+  it('imports a CSV library through the batch endpoint', async () => {
+    const imported = { id: 3, title: 'Solaris', releaseYear: 1972, director: 'Andrei Tarkovsky', genre: 'Science Fiction', runtimeMinutes: 167, language: 'Russian', watched: false, personalRating: null, filePath: '/movies/solaris.mkv', notes: null }
+    mockAuthenticated(
+      response(movies),
+      response({ importedCount: 1, skippedDuplicates: 0, movies: [imported] }, 201),
+    )
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+    const file = new File([moviesToCsv([imported])], 'movies.csv', { type: 'text/csv' })
+    await userEvent.upload(screen.getByLabelText('Choose CSV file'), file)
+    await userEvent.click(await screen.findByRole('button', { name: 'Import 1 movie' }))
+
+    expect(await screen.findByText('Imported 1 movie')).toBeInTheDocument()
+    expect(screen.getAllByText('Solaris').length).toBeGreaterThan(0)
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('explains when the running backend does not have the batch endpoint', async () => {
+    const imported = { title: 'Solaris', releaseYear: 1972, director: 'Andrei Tarkovsky', genre: 'Science Fiction', runtimeMinutes: 167, language: 'Russian', watched: false, personalRating: null, filePath: '/movies/solaris.mkv', notes: null }
+    mockAuthenticated(
+      response(movies),
+      response({ error: 'Method Not Allowed' }, 405),
+    )
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+    await userEvent.upload(screen.getByLabelText('Choose CSV file'), new File([moviesToCsv([imported])], 'movies.csv', { type: 'text/csv' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Import 1 movie' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The running backend is out of date. Restart or redeploy it, then try the import again.')
+  })
+
+  it('exports the current library as a downloadable CSV', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:framebase') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    mockAuthenticated(response(movies))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
+
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(click).toHaveBeenCalledOnce()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:framebase')
+    expect(await screen.findByText('Exported 2 movies to CSV')).toBeInTheDocument()
   })
 
   it('shows a retry state when the movie service is unavailable', async () => {

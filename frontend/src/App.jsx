@@ -1,31 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Film, KeyRound, Languages, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, ChevronDown, Clapperboard, Clock3, Download, Film, KeyRound, Languages, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Upload, X } from 'lucide-react'
 import { authApi } from './api/auth'
 import { movieApi } from './api/movies'
+import BatchImportDialog from './components/BatchImportDialog'
 import { BrandMark } from './components/Icons'
 import LoginPage from './components/LoginPage'
 import MovieForm from './components/MovieForm'
 import MovieTable from './components/MovieTable'
 import PasswordChangeDialog from './components/PasswordChangeDialog'
+import { moviesToCsv } from './utils/movieCsv'
 
 const APP_COPY = {
   en: {
     locale: 'en', brandSubtitle: 'Personal movie index', library: 'Library', overview: 'Overview', addMovie: 'Add movie', passcode: 'Passcode', changePasscode: 'Change passcode', signOut: 'Sign out', switchLanguage: 'Switch to Chinese', switchText: '中文',
     heroEyebrow: 'Your private screening room', heroTitle: 'Find the right film', heroAccent: 'without the scroll.', heroBody: 'A clean index of every title you own, what you have watched, and what deserves the next evening.', titlesIndexed: 'titles indexed',
     totalCollection: 'Total collection', titles: 'titles', watched: 'Watched', complete: 'complete', timeWatched: 'Time watched', hours: 'hours', averageRating: 'Average rating', outOfTen: 'out of 10',
-    catalog: 'Catalog', movieLibrary: 'Movie library', shown: (filtered, total) => `${filtered} of ${total} titles shown`, searchLibrary: 'Search library', searchPlaceholder: 'Search title, director, genre…', clearSearch: 'Clear search', filters: 'Filters', sortMovies: 'Sort movies', newest: 'Newest first', oldest: 'Oldest first', titleSort: 'Title A–Z', ratingSort: 'Highest rated', genre: 'Genre', status: 'Status', allGenres: 'All genres', allMovies: 'All movies', unwatched: 'Unwatched', clearFilters: 'Clear filters',
+    catalog: 'Catalog', movieLibrary: 'Movie library', shown: (filtered, total) => `${filtered} of ${total} titles shown`, importCsv: 'Import CSV', exportCsv: 'Export CSV', searchLibrary: 'Search library', searchPlaceholder: 'Search title, director, genre…', clearSearch: 'Clear search', filters: 'Filters', sortMovies: 'Sort movies', newest: 'Newest first', oldest: 'Oldest first', titleSort: 'Title A–Z', ratingSort: 'Highest rated', genre: 'Genre', status: 'Status', allGenres: 'All genres', allMovies: 'All movies', unwatched: 'Unwatched', clearFilters: 'Clear filters',
     loadErrorTitle: 'Could not load your library', serviceUnavailable: 'The movie service is not available. Start the backend and try again.', retry: 'Retry', loadingMovies: 'Loading movies', footer: 'Your collection. Your ratings. Your next movie.', footerNote: 'Local-first catalog · Built for movie nights',
     deleteTitle: (title) => `Remove “${title}”?`, deleteBody: 'This deletes the catalog entry. It does not delete the movie file from your device.', keepMovie: 'Keep movie', removing: 'Removing…', remove: 'Remove',
-    movieUpdated: 'Movie updated', movieAdded: 'Movie added to your library', passcodeUpdated: 'Passcode updated', markedWatched: 'Marked as watched', movedWatchlist: 'Moved back to watchlist', movieRemoved: 'Movie removed'
+    movieUpdated: 'Movie updated', movieAdded: 'Movie added to your library', passcodeUpdated: 'Passcode updated', markedWatched: 'Marked as watched', movedWatchlist: 'Moved back to watchlist', movieRemoved: 'Movie removed', exported: (count) => `Exported ${count} ${count === 1 ? 'movie' : 'movies'} to CSV`, imported: (count, skipped) => `Imported ${count} ${count === 1 ? 'movie' : 'movies'}${skipped ? ` · skipped ${skipped} duplicates` : ''}`, templateDownloaded: 'CSV template downloaded', batchEndpointUnavailable: 'The running backend is out of date. Restart or redeploy it, then try the import again.'
   },
   zh: {
     locale: 'zh-CN', brandSubtitle: '私人电影索引', library: '片库', overview: '概览', addMovie: '添加电影', passcode: '口令', changePasscode: '修改口令', signOut: '退出登录', switchLanguage: '切换到英文', switchText: 'EN',
     heroEyebrow: '你的私人放映室', heroTitle: '找到今晚最合适的电影', heroAccent: '不再反复翻找。', heroBody: '清晰整理你拥有的每一部影片、观看记录，以及下一次电影之夜的候选片单。', titlesIndexed: '部电影已收录',
     totalCollection: '全部收藏', titles: '部', watched: '已观看', complete: '已完成', timeWatched: '观看时长', hours: '小时', averageRating: '平均评分', outOfTen: '满分 10 分',
-    catalog: '电影目录', movieLibrary: '我的片库', shown: (filtered, total) => `已显示 ${filtered} / ${total} 部电影`, searchLibrary: '搜索片库', searchPlaceholder: '搜索片名、导演或类型…', clearSearch: '清除搜索', filters: '筛选', sortMovies: '电影排序', newest: '最新上映', oldest: '最早上映', titleSort: '片名 A–Z', ratingSort: '评分最高', genre: '类型', status: '状态', allGenres: '全部类型', allMovies: '全部电影', unwatched: '未观看', clearFilters: '清除筛选',
+    catalog: '电影目录', movieLibrary: '我的片库', shown: (filtered, total) => `已显示 ${filtered} / ${total} 部电影`, importCsv: '导入 CSV', exportCsv: '导出 CSV', searchLibrary: '搜索片库', searchPlaceholder: '搜索片名、导演或类型…', clearSearch: '清除搜索', filters: '筛选', sortMovies: '电影排序', newest: '最新上映', oldest: '最早上映', titleSort: '片名 A–Z', ratingSort: '评分最高', genre: '类型', status: '状态', allGenres: '全部类型', allMovies: '全部电影', unwatched: '未观看', clearFilters: '清除筛选',
     loadErrorTitle: '无法加载你的片库', serviceUnavailable: '电影服务暂时不可用。请启动后端后重试。', retry: '重试', loadingMovies: '正在加载电影', footer: '你的收藏。你的评分。你的下一部电影。', footerNote: '本地优先片库 · 为电影之夜打造',
     deleteTitle: (title) => `移除《${title}》？`, deleteBody: '这只会删除片库记录，不会删除设备中的电影文件。', keepMovie: '保留电影', removing: '正在移除…', remove: '移除',
-    movieUpdated: '电影已更新', movieAdded: '电影已加入片库', passcodeUpdated: '口令已更新', markedWatched: '已标记为看过', movedWatchlist: '已移回待看片单', movieRemoved: '电影已移除'
+    movieUpdated: '电影已更新', movieAdded: '电影已加入片库', passcodeUpdated: '口令已更新', markedWatched: '已标记为看过', movedWatchlist: '已移回待看片单', movieRemoved: '电影已移除', exported: (count) => `已导出 ${count} 部电影到 CSV`, imported: (count, skipped) => `已导入 ${count} 部电影${skipped ? ` · 跳过 ${skipped} 条重复记录` : ''}`, templateDownloaded: 'CSV 模板已下载', batchEndpointUnavailable: '当前运行的后端版本过旧。请重启或重新部署后端，然后再次导入。'
   }
 }
 
@@ -47,6 +49,17 @@ function ConfirmDialog({ movie, busy, copy, onCancel, onConfirm }) {
 
 function LoadingRows({ label }) {
   return <div className="loading-panel" aria-label={label}><span /><span /><span /><span /></div>
+}
+
+function downloadCsv(csv, fileName) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 export default function App() {
@@ -73,6 +86,9 @@ export default function App() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState('')
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [batchImporting, setBatchImporting] = useState(false)
+  const [batchError, setBatchError] = useState('')
   const copy = APP_COPY[language]
 
   const loadMovies = useCallback(async () => {
@@ -228,6 +244,34 @@ export default function App() {
     }
   }
 
+  function exportMovies() {
+    downloadCsv(moviesToCsv(movies), 'framebase-movies.csv')
+    setToast(copy.exported(movies.length))
+  }
+
+  function downloadTemplate() {
+    downloadCsv(moviesToCsv([]), 'framebase-import-template.csv')
+    setToast(copy.templateDownloaded)
+  }
+
+  async function importMovies(batch) {
+    setBatchImporting(true)
+    setBatchError('')
+    try {
+      const result = await movieApi.createBatch(batch)
+      setMovies((current) => [...current, ...result.movies])
+      setBatchOpen(false)
+      setToast(copy.imported(result.importedCount, result.skippedDuplicates))
+    } catch (requestError) {
+      const endpointUnavailable = requestError.status === 404 || requestError.status === 405
+      setBatchError(endpointUnavailable
+        ? copy.batchEndpointUnavailable
+        : Object.values(requestError.fieldErrors || {})[0] || requestError.message)
+    } finally {
+      setBatchImporting(false)
+    }
+  }
+
   async function confirmDelete() {
     setDeleting(true)
     try {
@@ -289,7 +333,11 @@ export default function App() {
         <section className="library-panel">
           <div className="panel-heading">
             <div><span className="eyebrow">{copy.catalog}</span><h2>{copy.movieLibrary}</h2><p>{copy.shown(filteredMovies.length, movies.length)}</p></div>
-            <button className="button button-primary mobile-add" type="button" onClick={openNew}><Plus size={16} />{copy.addMovie}</button>
+            <div className="panel-actions">
+              <button className="button button-quiet panel-batch-action" type="button" onClick={() => { setBatchError(''); setBatchOpen(true) }}><Upload size={15} />{copy.importCsv}</button>
+              <button className="button button-quiet panel-batch-action" type="button" onClick={exportMovies}><Download size={15} />{copy.exportCsv}</button>
+              <button className="button button-primary mobile-add" type="button" onClick={openNew}><Plus size={16} />{copy.addMovie}</button>
+            </div>
           </div>
 
           <div className="toolbar">
@@ -308,6 +356,7 @@ export default function App() {
       <footer className="site-footer"><BrandMark /><span>FRAMEBASE</span><p>{copy.footer}</p><small>{copy.footerNote}</small></footer>
 
       {formOpen && <MovieForm language={language} movie={formMovie} saving={saving} serverErrors={serverErrors} onClose={() => setFormOpen(false)} onSave={saveMovie} />}
+      {batchOpen && <BatchImportDialog language={language} busy={batchImporting} error={batchError} onClose={() => setBatchOpen(false)} onImport={importMovies} onDownloadTemplate={downloadTemplate} />}
       {passwordDialogOpen && <PasswordChangeDialog language={language} busy={changingPassword} error={passwordError} onClose={() => setPasswordDialogOpen(false)} onSave={changePassword} />}
       {deleteMovie && <ConfirmDialog movie={deleteMovie} busy={deleting} copy={copy} onCancel={() => setDeleteMovie(null)} onConfirm={confirmDelete} />}
       {toast && <div className="toast" role="status"><Check size={16} />{toast}</div>}
