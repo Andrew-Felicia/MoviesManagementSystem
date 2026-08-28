@@ -6,8 +6,12 @@ import PasswordChangeDialog from './PasswordChangeDialog'
 describe('PasswordChangeDialog', () => {
   it('submits a different confirmed passcode', async () => {
     const onSave = vi.fn()
-    render(<PasswordChangeDialog busy={false} error="" onClose={vi.fn()} onSave={onSave} />)
+    render(<PasswordChangeDialog username="admin" busy={false} error="" onClose={vi.fn()} onSave={onSave} />)
 
+    expect(document.querySelector('input[name="username"]')).toHaveValue('admin')
+    expect(document.querySelector('input[name="username"]')).toHaveAttribute('autocomplete', 'username')
+    expect(screen.getByLabelText('Current passcode')).toHaveAttribute('autocomplete', 'current-password')
+    expect(screen.getByLabelText('New passcode')).toHaveAttribute('autocomplete', 'new-password')
     await userEvent.type(screen.getByLabelText('Current passcode'), 'admin')
     await userEvent.type(screen.getByLabelText('New passcode'), 'unique-passcode')
     await userEvent.type(screen.getByLabelText('Confirm new passcode'), 'unique-passcode')

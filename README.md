@@ -34,6 +34,47 @@ The React frontend is in `frontend/`. During development, Vite forwards
 
 Open `http://localhost:5173`.
 
+### Stop the backend when port 8080 is already in use
+
+Only one process can listen on port 8080. If Spring Boot reports `Port 8080
+was already in use`, find the process that currently owns the port:
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+```
+
+The output includes a PID, for example:
+
+```text
+COMMAND   PID      USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+java    22856  username   93u  IPv6  ...         0t0  TCP *:8080 (LISTEN)
+```
+
+Stop that exact process with a normal termination signal:
+
+```bash
+kill 22856
+```
+
+Replace `22856` with the PID shown on your computer. Confirm that the port is
+free before restarting the backend:
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+```
+
+No output means the port is free. You can then run:
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+If the process does not stop after a few seconds, use `kill -9 <PID>` only as a
+last resort because it prevents the application from shutting down cleanly.
+Also check that the backend is not running simultaneously from both IntelliJ
+and a terminal.
+
 The login page uses the initial administrator account below:
 
 ```text

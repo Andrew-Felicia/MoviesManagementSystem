@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -28,7 +28,10 @@ async function openLoginDialog() {
   return screen.findByRole('dialog', { name: 'Welcome back' })
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 describe('App', () => {
   it('shows a session check while authentication is loading', () => {
@@ -42,11 +45,35 @@ describe('App', () => {
     render(<App />)
     expect((await screen.findAllByText('Arrival')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('Heat').length).toBeGreaterThan(0)
-    expect(screen.getByText('2 of 2 titles shown')).toBeInTheDocument()
+    expect(screen.getByText('2 of 2 titles matched')).toBeInTheDocument()
     expect(screen.getByText('admin')).toBeInTheDocument()
   })
 
+  it('moves and resets the hero spotlight with the pointer', async () => {
+    mockAuthenticated(response(movies))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    const hero = document.querySelector('.hero-strip')
+    vi.spyOn(hero, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 200, height: 100, right: 200, bottom: 100, x: 0, y: 0, toJSON: () => ({}) })
+
+    const pointerMove = new Event('pointermove', { bubbles: true })
+    Object.defineProperties(pointerMove, { clientX: { value: 50 }, clientY: { value: 75 } })
+    fireEvent(hero, pointerMove)
+    expect(hero.style.getPropertyValue('--spotlight-x')).toBe('25%')
+    expect(hero.style.getPropertyValue('--spotlight-y')).toBe('75%')
+
+    fireEvent.pointerLeave(hero)
+    expect(hero.style.getPropertyValue('--spotlight-x')).toBe('')
+    expect(hero.style.getPropertyValue('--spotlight-y')).toBe('')
+  })
+
   it('changes the authenticated account passcode', async () => {
+    const storeCredential = vi.fn().mockResolvedValue(undefined)
+    class BrowserPasswordCredential {
+      constructor(values) { Object.assign(this, values) }
+    }
+    vi.stubGlobal('PasswordCredential', BrowserPasswordCredential)
+    vi.stubGlobal('navigator', Object.create(navigator, { credentials: { value: { store: storeCredential } } }))
     mockAuthenticated(response(movies), response(null, 204))
     render(<App />)
     await screen.findAllByText('Arrival')
@@ -59,6 +86,33 @@ describe('App', () => {
     expect(await screen.findByText('Passcode updated')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Change passcode' })).not.toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ method: 'PUT' }))
+    expect(storeCredential).toHaveBeenCalledWith(expect.objectContaining({ id: 'admin', password: 'unique-passcode' }))
+  })
+
+  it('shows twelve movies per page and resets pagination after searching', async () => {
+    const manyMovies = Array.from({ length: 25 }, (_, index) => ({
+      ...movies[0],
+      id: index + 1,
+      title: `Movie ${String(index + 1).padStart(2, '0')}`,
+      releaseYear: 2000 + index,
+    }))
+    mockAuthenticated(response(manyMovies))
+    render(<App />)
+
+    expect((await screen.findAllByText('Movie 25')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Movie 13')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 1–12 of 25')).toBeInTheDocument()
+    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect((await screen.findAllByText('Movie 13')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Movie 25')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 13–24 of 25')).toBeInTheDocument()
+    expect(screen.getByText('Page 2 of 3')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText('Search library'), 'Movie 25')
+    expect((await screen.findAllByText('Movie 25')).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument()
   })
 
   it('shows the login page when no session exists', async () => {

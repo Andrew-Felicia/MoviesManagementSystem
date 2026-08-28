@@ -11,7 +11,7 @@ const CHINESE_ERRORS = {
   'New passcode must be different': '新口令必须与当前口令不同'
 }
 
-export default function PasswordChangeDialog({ language = 'en', busy, error, onClose, onSave }) {
+export default function PasswordChangeDialog({ language = 'en', username = '', busy, error, onClose, onSave }) {
   const copy = COPY[language]
   const [currentPasscode, setCurrentPasscode] = useState('')
   const [newPasscode, setNewPasscode] = useState('')
@@ -42,17 +42,18 @@ export default function PasswordChangeDialog({ language = 'en', busy, error, onC
         <p>{copy.intro}</p>
 
         <form className="login-form" onSubmit={submit}>
+          <input className="credential-username" id="credential-username" name="username" value={username} readOnly autoComplete="username" aria-hidden="true" tabIndex={-1} />
           <label>
             <span>{copy.current}</span>
-            <div className="login-input"><LockKeyhole size={16} /><input aria-label={copy.current} type="password" autoComplete="current-password" value={currentPasscode} onChange={(event) => setCurrentPasscode(event.target.value)} autoFocus /></div>
+            <div className="login-input"><LockKeyhole size={16} /><input id="current-password" aria-label={copy.current} name="current-password" type="password" autoComplete="current-password" value={currentPasscode} onChange={(event) => setCurrentPasscode(event.target.value)} autoFocus /></div>
           </label>
           <label>
             <span>{copy.next}</span>
-            <div className="login-input"><KeyRound size={16} /><input aria-label={copy.next} type="password" autoComplete="new-password" value={newPasscode} onChange={(event) => setNewPasscode(event.target.value)} /></div>
+            <div className="login-input"><KeyRound size={16} /><input id="new-password" aria-label={copy.next} name="new-password" type="password" autoComplete="new-password" value={newPasscode} onChange={(event) => setNewPasscode(event.target.value)} /></div>
           </label>
           <label>
             <span>{copy.confirm}</span>
-            <div className="login-input"><KeyRound size={16} /><input aria-label={copy.confirm} type="password" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
+            <div className="login-input"><KeyRound size={16} /><input id="confirm-password" aria-label={copy.confirm} name="confirm-password" type="password" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></div>
           </label>
 
           {(formError || error) && <div className="login-error" role="alert">{formError ? copy[formError] : language === 'zh' ? (CHINESE_ERRORS[error] || error) : error}</div>}
