@@ -289,7 +289,10 @@ main { width: min(1400px, calc(100% - 40px)); margin: 0 auto; }
 @keyframes login-topbar-enter { from { opacity: 0; transform: translateY(-18px); } }
 @keyframes login-title-enter { from { opacity: 0; transform: translate3d(-34px, 22px, 0); filter: blur(8px); } }
 @keyframes login-title-glow { 0%, 100% { text-shadow: 0 0 0 rgb(119 179 248 / 0%); } 50% { text-shadow: 0 0 34px rgb(119 179 248 / 18%); } }
-@keyframes login-gallery-enter { from { opacity: 0; transform: translate3d(40px, 28px, 0) scale(.94); filter: blur(8px) drop-shadow(0 30px 45px rgb(0 0 0 / 0%)); } }
+@keyframes login-gallery-enter {
+  from { opacity: 0; transform: translate3d(40px, 28px, 0) scale(.94); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
 @keyframes login-poster-float-left { 0%, 100% { translate: 0 0; } 50% { translate: -5px -13px; } }
 @keyframes login-poster-float-center { 0%, 100% { translate: 0 -3px; } 50% { translate: 4px 10px; } }
 @keyframes login-poster-float-right { 0%, 100% { translate: 0 5px; } 50% { translate: 6px -9px; } }
@@ -354,10 +357,10 @@ main { width: min(1400px, calc(100% - 40px)); margin: 0 auto; }
 .login-frame::after { inset: 20px; }
 .login-frame span { font: 800 30px 'Manrope'; }
 .login-frame small { font-size: 8px; letter-spacing: .11em; text-transform: uppercase; }
-.login-poster-gallery { width: min(39vw, 570px); height: min(61vh, 560px); min-height: 430px; position: relative; justify-self: end; filter: drop-shadow(0 30px 45px rgb(0 0 0 / 35%)); animation: login-gallery-enter 1s .28s cubic-bezier(.16, 1, .3, 1) both; }
+.login-poster-gallery { width: min(39vw, 570px); height: min(61vh, 560px); min-height: 430px; position: relative; justify-self: end; animation: login-gallery-enter 1s .28s cubic-bezier(.16, 1, .3, 1) both; }
 .classic-poster { width: min(15vw, 218px); aspect-ratio: 2 / 3; margin: 0; position: absolute; overflow: hidden; border: 1px solid rgb(191 214 236 / 35%); background: #0c1722; box-shadow: 0 22px 45px rgb(0 0 0 / 48%); transition: transform .32s ease, z-index 0s .16s; }
 .classic-poster::after { content: ''; position: absolute; inset: 0; border: 7px solid rgb(7 17 30 / 36%); pointer-events: none; }
-.classic-poster img { width: 100%; height: 100%; display: block; object-fit: cover; filter: saturate(.78) contrast(1.05); transition: filter .3s ease, scale .5s ease; }
+.classic-poster img { width: 100%; height: 100%; display: block; object-fit: cover; transition: filter .3s ease, scale .5s ease; }
 .classic-poster figcaption { position: absolute; inset: auto 0 0; z-index: 2; padding: 45px 14px 13px; display: grid; gap: 3px; background: linear-gradient(transparent, rgb(2 8 14 / 92%)); }
 .classic-poster figcaption strong { color: #eff6fd; font: 700 10px 'Manrope'; }
 .classic-poster figcaption span { color: #90a3b6; font-size: 8px; }
