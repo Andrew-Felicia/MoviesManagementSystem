@@ -1,8 +1,11 @@
 package com.vincent.MovieLibrary.repository;
 
+import com.vincent.MovieLibrary.dto.AdminUserResponse;
 import com.vincent.MovieLibrary.entity.Movie;
+import com.vincent.MovieLibrary.entity.UserAccount;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -21,7 +24,23 @@ class MovieRepositoryTest {
     private MovieRepository movieRepository;
 
     @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
     private EntityManager entityManager;
+
+    private UserAccount owner;
+
+    @BeforeEach
+    void createOwner() {
+        owner = new UserAccount();
+        owner.setUsername("repository-user");
+        owner.setPasswordHash("test-hash");
+        owner.setRole("USER");
+        owner.setEnabled(true);
+        owner.setCreatedAt(java.time.LocalDateTime.now());
+        owner = userAccountRepository.saveAndFlush(owner);
+    }
 
     @Test
     void saveAndFindByIdPersistsEveryMappedField() {
@@ -43,6 +62,7 @@ class MovieRepositoryTest {
         assertThat(found.getPersonalRating()).isEqualTo(9.8);
         assertThat(found.getFilePath()).isEqualTo("/movies/Interstellar.mkv");
         assertThat(found.getNotes()).isEqualTo("Test notes");
+        assertThat(found.getOwner().getUsername()).isEqualTo("repository-user");
     }
 
     @Test
@@ -110,13 +130,49 @@ class MovieRepositoryTest {
         assertThat(found.getNotes()).isNull();
     }
 
-    private static Movie movie(
+    @Test
+    void ownerScopedQueriesNeverReturnAnotherUsersMovies() {
+        movieRepository.saveAndFlush(movie("Private title", 2026, false, null));
+
+        assertThat(movieRepository.findAllByOwner_UsernameIgnoreCase("REPOSITORY-USER"))
+                .extracting(Movie::getTitle)
+                .containsExactly("Private title");
+        assertThat(movieRepository.findAllByOwner_UsernameIgnoreCase("someone-else")).isEmpty();
+        Integer id = movieRepository.findAll().getFirst().getId();
+        assertThat(movieRepository.findByIdAndOwner_UsernameIgnoreCase(id, "someone-else")).isEmpty();
+    }
+
+    @Test
+    void accountSummariesIncludeEachUsersMovieCount() {
+        movieRepository.saveAll(List.of(
+                movie("First private movie", 2020, true, 8.0),
+                movie("Second private movie", 2021, false, null)
+        ));
+        UserAccount emptyAccount = new UserAccount();
+        emptyAccount.setUsername("empty-account");
+        emptyAccount.setPasswordHash("test-hash");
+        emptyAccount.setRole("USER");
+        emptyAccount.setEnabled(true);
+        emptyAccount.setCreatedAt(java.time.LocalDateTime.now());
+        userAccountRepository.saveAndFlush(emptyAccount);
+        entityManager.clear();
+
+        assertThat(userAccountRepository.findAllWithMovieCounts())
+                .extracting(AdminUserResponse::username, AdminUserResponse::movieCount)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("repository-user", 2L),
+                        org.assertj.core.groups.Tuple.tuple("empty-account", 0L)
+                );
+    }
+
+    private Movie movie(
             String title,
             Integer releaseYear,
             Boolean watched,
             Double rating
     ) {
         Movie movie = new Movie();
+        movie.setOwner(owner);
         movie.setTitle(title);
         movie.setReleaseYear(releaseYear);
         movie.setDirector("Christopher Nolan");

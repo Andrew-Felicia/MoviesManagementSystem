@@ -1,0 +1,19 @@
+title,releaseYear,director,genre,runtimeMinutes,language,watched,personalRating,filePath,notes
+The Grand Budapest Hotel,2014,Wes Anderson,Comedy,99,English,true,8.6,/movies/the-grand-budapest-hotel.mkv,Testing watched movie and rating
+Spirited Away,2001,Hayao Miyazaki,Animation,125,Japanese,true,9.4,/movies/spirited-away.mkv,测试 UTF-8 notes
+Arrival,2016,Denis Villeneuve,Science Fiction,116,English,true,9.2,/movies/arrival.mkv,First-contact drama
+In the Mood for Love,2000,Wong Kar-wai,Romance,98,Cantonese,false,9.0,/movies/in-the-mood-for-love.mkv,Watchlist entry
+Parasite,2019,Bong Joon-ho,Thriller,132,Korean,true,9.1,/movies/parasite.mkv,Winner of Best Picture
+The Godfather,1972,Francis Ford Coppola,Crime,175,English,true,9.6,/movies/the-godfather.mkv,Classic family saga
+Moonlight,2016,Barry Jenkins,Drama,111,English,false,8.5,/movies/moonlight.mkv,Queued for movie night
+Mad Max: Fury Road,2015,George Miller,Action,120,English,true,8.8,/movies/mad-max-fury-road.mkv,High-energy rewatch
+Portrait of a Lady on Fire,2019,Celine Sciamma,Romance,122,French,false,8.9,/movies/portrait-of-a-lady-on-fire.mkv,Beautiful cinematography
+Blade Runner 2049,2017,Denis Villeneuve,Science Fiction,164,English,true,8.7,/movies/blade-runner-2049.mkv,Slow-burn sci-fi
+The Handmaiden,2016,Park Chan-wook,Thriller,145,Korean,false,8.8,/movies/the-handmaiden.mkv,Contains plot twists
+Whiplash,2014,Damien Chazelle,Drama,106,English,true,9.0,/movies/whiplash.mkv,Great sound design
+The Lives of Others,2006,Florian Henckel von Donnersmarck,Drama,137,German,false,8.6,/movies/the-lives-of-others.mkv,Cold War story
+The Lobster,2015,Yorgos Lanthimos,Comedy,119,English,false,,/movies/the-lobster.mkv,Unrated on purpose
+Knives Out,2019,Rian Johnson,Mystery,130,English,true,8.2,/movies/knives-out.mkv,"Fun, clever, and rewatchable"
+The Farewell,2019,Lulu Wang,Comedy,100,English,false,8.1,/movies/the-farewell.mkv,"Family story with a comma, for CSV escaping"
+Cinema Paradiso,1988,Giuseppe Tornatore,Drama,155,Italian,true,9.3,/movies/cinema-paradiso.mkv,"Quote test: ""Love movies."""
+Perfect Blue,1997,Satoshi Kon,Animation,81,Japanese,false,8.4,/movies/perfect-blue.mkv,Psychological thriller

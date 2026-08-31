@@ -48,6 +48,17 @@ describe('movieApi', () => {
     expect(fetch).toHaveBeenCalledWith('/api/movies/7', expect.objectContaining({ method: 'PUT' }))
   })
 
+  it('runs owner-scoped bulk watch, unwatch, and delete actions', async () => {
+    mockRequest(response({ affectedCount: 3 }))
+
+    await expect(movieApi.markAllWatched()).resolves.toEqual({ affectedCount: 3 })
+    await expect(movieApi.markAllUnwatched()).resolves.toEqual({ affectedCount: 3 })
+    await expect(movieApi.removeAll()).resolves.toEqual({ affectedCount: 3 })
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch/watched', expect.objectContaining({ method: 'PUT', headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }) }))
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch/unwatched', expect.objectContaining({ method: 'PUT', headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }) }))
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch', expect.objectContaining({ method: 'DELETE', headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }) }))
+  })
+
   it('returns null for a successful delete', async () => {
     mockRequest(response(null, 204))
     await expect(movieApi.remove(7)).resolves.toBeNull()

@@ -3,6 +3,7 @@ package com.vincent.MovieLibrary.config;
 import com.vincent.MovieLibrary.entity.UserAccount;
 import com.vincent.MovieLibrary.dto.AuthResponse;
 import com.vincent.MovieLibrary.repository.UserAccountRepository;
+import com.vincent.MovieLibrary.repository.MovieRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -43,20 +44,24 @@ public class SecurityConfig {
     @Bean
     public CommandLineRunner administratorInitializer(
             UserAccountRepository repository,
+            MovieRepository movieRepository,
             PasswordEncoder encoder,
             @Value("${app.admin.username}") String username,
             @Value("${app.admin.password}") String password
     ) {
         return arguments -> {
-            if (repository.findByUsernameIgnoreCase(username).isEmpty()) {
-                UserAccount administrator = new UserAccount();
+            UserAccount administrator = repository.findByUsernameIgnoreCase(username).orElse(null);
+            if (administrator == null) {
+                administrator = new UserAccount();
                 administrator.setUsername(username);
                 administrator.setPasswordHash(encoder.encode(password));
                 administrator.setRole("ADMIN");
                 administrator.setEnabled(true);
                 administrator.setCreatedAt(java.time.LocalDateTime.now());
-                repository.save(administrator);
+                administrator = repository.save(administrator);
             }
+            movieRepository.assignUnownedMoviesTo(administrator);
+            movieRepository.enforceOwnerRequired();
         };
     }
 
@@ -74,6 +79,7 @@ public class SecurityConfig {
                                 "/", "/index.html", "/assets/**", "/favicon.ico",
                                 "/api/auth/login", "/api/auth/register", "/api/auth/csrf"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .formLogin(form -> form

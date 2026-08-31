@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BarChart3, Check, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Clock3, Download, Film, KeyRound, Languages, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Upload, X } from 'lucide-react'
+import { AlertCircle, BarChart3, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Clock3, Download, Film, KeyRound, Languages, Library, LogOut, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Trash2, Undo2, Upload, Users, X } from 'lucide-react'
 import { authApi } from './api/auth'
 import { movieApi } from './api/movies'
+import AdminUsersDialog from './components/AdminUsersDialog'
 import BatchImportDialog from './components/BatchImportDialog'
 import { BrandMark } from './components/Icons'
 import LoginPage from './components/LoginPage'
@@ -14,8 +15,8 @@ const APP_COPY = {
   en: {
     locale: 'en', brandSubtitle: 'Personal movie index', library: 'Library', overview: 'Overview', addMovie: 'Add movie', passcode: 'Passcode', changePasscode: 'Change passcode', signOut: 'Sign out', switchLanguage: 'Switch to Chinese', switchText: '中文',
     heroEyebrow: 'Your private screening room', heroTitle: 'Find the right film', heroAccent: 'without the scroll.', heroBody: 'A clean index of every title you own, what you have watched, and what deserves the next evening.', titlesIndexed: 'titles indexed',
-    totalCollection: 'Total collection', titles: 'titles', watched: 'Watched', complete: 'complete', timeWatched: 'Time watched', hours: 'hours', averageRating: 'Average rating', outOfTen: 'out of 10',
-    catalog: 'Catalog', movieLibrary: 'Movie library', shown: (filtered, total) => `${filtered} of ${total} titles matched`, pageRange: (start, end, total) => `Showing ${start}–${end} of ${total}`, pageStatus: (page, total) => `Page ${page} of ${total}`, previousPage: 'Previous page', nextPage: 'Next page', goToPage: (page) => `Go to page ${page}`, importCsv: 'Import CSV', exportCsv: 'Export CSV', searchLibrary: 'Search library', searchPlaceholder: 'Search title, director, genre…', clearSearch: 'Clear search', filters: 'Filters', sortMovies: 'Sort movies', newest: 'Newest first', oldest: 'Oldest first', titleSort: 'Title A–Z', ratingSort: 'Highest rated', genre: 'Genre', status: 'Status', allGenres: 'All genres', allMovies: 'All movies', unwatched: 'Unwatched', clearFilters: 'Clear filters',
+    totalCollection: 'Total collection', titles: 'titles', watched: 'Watched', complete: 'complete', timeWatched: 'Time watched', hours: 'hours', averageRating: 'Average rating', outOfTen: 'out of 10', registeredUsers: 'Registered users', accounts: 'accounts', manageUsers: 'Manage users', passcodeReset: (username) => `Passcode reset for ${username}`,
+    catalog: 'Catalog', movieLibrary: 'Movie library', shown: (filtered, total) => `${filtered} of ${total} titles matched`, pageRange: (start, end, total) => `Showing ${start}–${end} of ${total}`, pageStatus: (page, total) => `Page ${page} of ${total}`, previousPage: 'Previous page', nextPage: 'Next page', goToPage: (page) => `Go to page ${page}`, importCsv: 'Import CSV', exportCsv: 'Export CSV', watchAll: 'Watch all', unwatchAll: 'Unwatch all', deleteAll: 'Delete all', watchingAll: 'Updating…', deleteAllTitle: (count) => `Delete all ${count} movies?`, deleteAllBody: 'This permanently removes every movie entry in your library, including films hidden by filters. It does not delete movie files from your device.', deleteAllConfirm: 'Delete all movies', deletingAll: 'Deleting…', allMarkedWatched: (count) => `${count} ${count === 1 ? 'movie' : 'movies'} marked as watched`, allMarkedUnwatched: (count) => `${count} ${count === 1 ? 'movie' : 'movies'} moved to watchlist`, allDeleted: (count) => `${count} ${count === 1 ? 'movie' : 'movies'} deleted`, searchLibrary: 'Search library', searchPlaceholder: 'Search title, director, genre…', clearSearch: 'Clear search', filters: 'Filters', sortMovies: 'Sort movies', newest: 'Newest first', oldest: 'Oldest first', titleSort: 'Title A–Z', ratingSort: 'Highest rated', genre: 'Genre', status: 'Status', allGenres: 'All genres', allMovies: 'All movies', unwatched: 'Unwatched', clearFilters: 'Clear filters',
     loadErrorTitle: 'Could not load your library', serviceUnavailable: 'The movie service is not available. Start the backend and try again.', retry: 'Retry', loadingMovies: 'Loading movies', footer: 'Your collection. Your ratings. Your next movie.', footerNote: 'Local-first catalog · Built for movie nights',
     deleteTitle: (title) => `Remove “${title}”?`, deleteBody: 'This deletes the catalog entry. It does not delete the movie file from your device.', keepMovie: 'Keep movie', removing: 'Removing…', remove: 'Remove',
     movieUpdated: 'Movie updated', movieAdded: 'Movie added to your library', passcodeUpdated: 'Passcode updated', markedWatched: 'Marked as watched', movedWatchlist: 'Moved back to watchlist', movieRemoved: 'Movie removed', exported: (count) => `Exported ${count} ${count === 1 ? 'movie' : 'movies'} to CSV`, imported: (count, skipped) => `Imported ${count} ${count === 1 ? 'movie' : 'movies'}${skipped ? ` · skipped ${skipped} duplicates` : ''}`, templateDownloaded: 'CSV template downloaded', batchEndpointUnavailable: 'The running backend is out of date. Restart or redeploy it, then try the import again.'
@@ -23,8 +24,8 @@ const APP_COPY = {
   zh: {
     locale: 'zh-CN', brandSubtitle: '私人电影索引', library: '片库', overview: '概览', addMovie: '添加电影', passcode: '口令', changePasscode: '修改口令', signOut: '退出登录', switchLanguage: '切换到英文', switchText: 'EN',
     heroEyebrow: '你的私人放映室', heroTitle: '找到今晚最合适的电影', heroAccent: '不再反复翻找。', heroBody: '清晰整理你拥有的每一部影片、观看记录，以及下一次电影之夜的候选片单。', titlesIndexed: '部电影已收录',
-    totalCollection: '全部收藏', titles: '部', watched: '已观看', complete: '已完成', timeWatched: '观看时长', hours: '小时', averageRating: '平均评分', outOfTen: '满分 10 分',
-    catalog: '电影目录', movieLibrary: '我的片库', shown: (filtered, total) => `匹配 ${filtered} / ${total} 部电影`, pageRange: (start, end, total) => `当前显示第 ${start}–${end} 部，共 ${total} 部`, pageStatus: (page, total) => `第 ${page} / ${total} 页`, previousPage: '上一页', nextPage: '下一页', goToPage: (page) => `前往第 ${page} 页`, importCsv: '导入 CSV', exportCsv: '导出 CSV', searchLibrary: '搜索片库', searchPlaceholder: '搜索片名、导演或类型…', clearSearch: '清除搜索', filters: '筛选', sortMovies: '电影排序', newest: '最新上映', oldest: '最早上映', titleSort: '片名 A–Z', ratingSort: '评分最高', genre: '类型', status: '状态', allGenres: '全部类型', allMovies: '全部电影', unwatched: '未观看', clearFilters: '清除筛选',
+    totalCollection: '全部收藏', titles: '部', watched: '已观看', complete: '已完成', timeWatched: '观看时长', hours: '小时', averageRating: '平均评分', outOfTen: '满分 10 分', registeredUsers: '注册用户', accounts: '个账户', manageUsers: '管理用户', passcodeReset: (username) => `已重置 ${username} 的口令`,
+    catalog: '电影目录', movieLibrary: '我的片库', shown: (filtered, total) => `匹配 ${filtered} / ${total} 部电影`, pageRange: (start, end, total) => `当前显示第 ${start}–${end} 部，共 ${total} 部`, pageStatus: (page, total) => `第 ${page} / ${total} 页`, previousPage: '上一页', nextPage: '下一页', goToPage: (page) => `前往第 ${page} 页`, importCsv: '导入 CSV', exportCsv: '导出 CSV', watchAll: '全部标记为已看', unwatchAll: '全部标记为未看', deleteAll: '全部删除', watchingAll: '正在更新…', deleteAllTitle: (count) => `删除全部 ${count} 部电影？`, deleteAllBody: '这会永久删除你片库中的全部电影记录，包括筛选后暂时隐藏的电影；不会删除设备中的电影文件。', deleteAllConfirm: '删除全部电影', deletingAll: '正在删除…', allMarkedWatched: (count) => `已将 ${count} 部电影标记为已看`, allMarkedUnwatched: (count) => `已将 ${count} 部电影标记为未看`, allDeleted: (count) => `已删除 ${count} 部电影`, searchLibrary: '搜索片库', searchPlaceholder: '搜索片名、导演或类型…', clearSearch: '清除搜索', filters: '筛选', sortMovies: '电影排序', newest: '最新上映', oldest: '最早上映', titleSort: '片名 A–Z', ratingSort: '评分最高', genre: '类型', status: '状态', allGenres: '全部类型', allMovies: '全部电影', unwatched: '未观看', clearFilters: '清除筛选',
     loadErrorTitle: '无法加载你的片库', serviceUnavailable: '电影服务暂时不可用。请启动后端后重试。', retry: '重试', loadingMovies: '正在加载电影', footer: '你的收藏。你的评分。你的下一部电影。', footerNote: '本地优先片库 · 为电影之夜打造',
     deleteTitle: (title) => `移除《${title}》？`, deleteBody: '这只会删除片库记录，不会删除设备中的电影文件。', keepMovie: '保留电影', removing: '正在移除…', remove: '移除',
     movieUpdated: '电影已更新', movieAdded: '电影已加入片库', passcodeUpdated: '口令已更新', markedWatched: '已标记为看过', movedWatchlist: '已移回待看片单', movieRemoved: '电影已移除', exported: (count) => `已导出 ${count} 部电影到 CSV`, imported: (count, skipped) => `已导入 ${count} 部电影${skipped ? ` · 跳过 ${skipped} 条重复记录` : ''}`, templateDownloaded: 'CSV 模板已下载', batchEndpointUnavailable: '当前运行的后端版本过旧。请重启或重新部署后端，然后再次导入。'
@@ -59,6 +60,22 @@ function ConfirmDialog({ movie, busy, copy, onCancel, onConfirm }) {
         <div className="confirm-actions">
           <button className="button button-quiet" type="button" onClick={onCancel}>{copy.keepMovie}</button>
           <button className="button button-danger" type="button" onClick={onConfirm} disabled={busy}>{busy ? copy.removing : copy.remove}</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function DeleteAllDialog({ count, busy, copy, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="confirm-dialog confirm-all-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-all-title">
+        <div className="confirm-icon"><Trash2 size={23} /></div>
+        <h2 id="delete-all-title">{copy.deleteAllTitle(count)}</h2>
+        <p>{copy.deleteAllBody}</p>
+        <div className="confirm-actions">
+          <button className="button button-quiet" type="button" onClick={onCancel} disabled={busy}>{copy.keepMovie}</button>
+          <button className="button button-danger" type="button" onClick={onConfirm} disabled={busy}>{busy ? copy.deletingAll : copy.deleteAllConfirm}</button>
         </div>
       </section>
     </div>
@@ -107,7 +124,16 @@ export default function App() {
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchImporting, setBatchImporting] = useState(false)
   const [batchError, setBatchError] = useState('')
+  const [batchAction, setBatchAction] = useState('')
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [registeredUsers, setRegisteredUsers] = useState(null)
+  const [adminUsersOpen, setAdminUsersOpen] = useState(false)
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false)
+  const [adminUsersError, setAdminUsersError] = useState('')
+  const [adminResetError, setAdminResetError] = useState('')
+  const [adminResetting, setAdminResetting] = useState(false)
   const copy = APP_COPY[language]
 
   const loadMovies = useCallback(async () => {
@@ -143,6 +169,17 @@ export default function App() {
       setLoading(false)
     }
   }, [authLoading, currentUser, loadMovies])
+  useEffect(() => {
+    let active = true
+    if (currentUser?.role === 'ADMIN') {
+      authApi.adminStats()
+        .then((stats) => { if (active) setRegisteredUsers(stats.userCount) })
+        .catch(() => { if (active) setRegisteredUsers(null) })
+    } else {
+      setRegisteredUsers(null)
+    }
+    return () => { active = false }
+  }, [currentUser])
   useEffect(() => {
     if (!toast) return undefined
     const timer = window.setTimeout(() => setToast(''), 2600)
@@ -239,6 +276,9 @@ export default function App() {
       await authApi.logout()
       setCurrentUser(null)
       setMovies([])
+      setRegisteredUsers(null)
+      setAdminUsersOpen(false)
+      setAdminUsers([])
     } catch (requestError) {
       setToast(requestError.message)
     }
@@ -258,6 +298,35 @@ export default function App() {
       return false
     } finally {
       setChangingPassword(false)
+    }
+  }
+
+  async function openAdminUsers() {
+    setAdminUsersOpen(true)
+    setAdminUsersLoading(true)
+    setAdminUsersError('')
+    setAdminResetError('')
+    try {
+      setAdminUsers(await authApi.adminUsers())
+    } catch (requestError) {
+      setAdminUsersError(requestError.message)
+    } finally {
+      setAdminUsersLoading(false)
+    }
+  }
+
+  async function resetUserPassword(username, newPasscode) {
+    setAdminResetting(true)
+    setAdminResetError('')
+    try {
+      await authApi.resetUserPassword(username, newPasscode)
+      setToast(copy.passcodeReset(username))
+      return true
+    } catch (requestError) {
+      setAdminResetError(requestError.message)
+      return false
+    } finally {
+      setAdminResetting(false)
     }
   }
 
@@ -296,6 +365,46 @@ export default function App() {
         : Object.values(requestError.fieldErrors || {})[0] || requestError.message)
     } finally {
       setBatchImporting(false)
+    }
+  }
+
+  async function markAllWatched() {
+    setBatchAction('watch')
+    try {
+      const result = await movieApi.markAllWatched()
+      setMovies((current) => current.map((movie) => ({ ...movie, watched: true })))
+      setToast(copy.allMarkedWatched(result.affectedCount))
+    } catch (requestError) {
+      setToast(requestError.message)
+    } finally {
+      setBatchAction('')
+    }
+  }
+
+  async function markAllUnwatched() {
+    setBatchAction('unwatch')
+    try {
+      const result = await movieApi.markAllUnwatched()
+      setMovies((current) => current.map((movie) => ({ ...movie, watched: false })))
+      setToast(copy.allMarkedUnwatched(result.affectedCount))
+    } catch (requestError) {
+      setToast(requestError.message)
+    } finally {
+      setBatchAction('')
+    }
+  }
+
+  async function confirmDeleteAll() {
+    setBatchAction('delete')
+    try {
+      const result = await movieApi.removeAll()
+      setMovies([])
+      setDeleteAllOpen(false)
+      setToast(copy.allDeleted(result.affectedCount))
+    } catch (requestError) {
+      setToast(requestError.message)
+    } finally {
+      setBatchAction('')
     }
   }
 
@@ -348,6 +457,7 @@ export default function App() {
         <nav className="primary-nav" aria-label={language === 'zh' ? '主导航' : 'Primary navigation'}>
           <a className="active" href="#catalog"><Library size={15} />{copy.library}</a>
           <a href="#stats"><BarChart3 size={15} />{copy.overview}</a>
+          {currentUser.role === 'ADMIN' && <button className="admin-nav-button" type="button" onClick={openAdminUsers}><Users size={15} />{copy.manageUsers}</button>}
         </nav>
         <button className="button button-primary top-add" type="button" onClick={openNew}><Plus size={16} />{copy.addMovie}</button>
         <div className="account-chip"><span><ShieldCheck size={14} /></span><div><strong>{currentUser.username}</strong><small>{currentUser.role}</small></div></div>
@@ -374,11 +484,12 @@ export default function App() {
           </div>
         </div>
 
-        <section className="stats-grid" id="stats">
+        <section className={`stats-grid ${currentUser.role === 'ADMIN' ? 'with-admin' : ''}`} id="stats">
           <article><span className="stat-icon blue"><Film size={18} /></span><div><small>{copy.totalCollection}</small><strong>{movies.length}</strong><em>{copy.titles}</em></div></article>
           <article><span className="stat-icon green"><Check size={18} /></span><div><small>{copy.watched}</small><strong>{stats.watched}</strong><em>{movies.length ? Math.round(stats.watched / movies.length * 100) : 0}% {copy.complete}</em></div></article>
           <article><span className="stat-icon amber"><Clock3 size={18} /></span><div><small>{copy.timeWatched}</small><strong>{Math.floor(stats.minutes / 60)}</strong><em>{copy.hours}</em></div></article>
           <article><span className="stat-icon red"><Star size={18} /></span><div><small>{copy.averageRating}</small><strong>{stats.average.toFixed(1)}</strong><em>{copy.outOfTen}</em></div></article>
+          {currentUser.role === 'ADMIN' && <article className="admin-user-stat"><span className="stat-icon violet"><Users size={18} /></span><div><small>{copy.registeredUsers}</small><strong>{registeredUsers ?? '—'}</strong><em>{copy.accounts}</em></div></article>}
         </section>
 
         <section className="library-panel" id="catalog-results">
@@ -387,6 +498,9 @@ export default function App() {
             <div className="panel-actions">
               <button className="button button-quiet panel-batch-action" type="button" onClick={() => { setBatchError(''); setBatchOpen(true) }}><Upload size={15} />{copy.importCsv}</button>
               <button className="button button-quiet panel-batch-action" type="button" onClick={exportMovies}><Download size={15} />{copy.exportCsv}</button>
+              <button className="button button-quiet panel-batch-action" type="button" onClick={markAllWatched} disabled={Boolean(batchAction) || !movies.some((movie) => !movie.watched)}><CheckCheck size={15} />{batchAction === 'watch' ? copy.watchingAll : copy.watchAll}</button>
+              <button className="button button-quiet panel-batch-action" type="button" onClick={markAllUnwatched} disabled={Boolean(batchAction) || !movies.some((movie) => movie.watched)}><Undo2 size={15} />{batchAction === 'unwatch' ? copy.watchingAll : copy.unwatchAll}</button>
+              <button className="button button-danger panel-batch-action panel-delete-all" type="button" onClick={() => setDeleteAllOpen(true)} disabled={Boolean(batchAction) || movies.length === 0}><Trash2 size={15} />{copy.deleteAll}</button>
               <button className="button button-primary mobile-add" type="button" onClick={openNew}><Plus size={16} />{copy.addMovie}</button>
             </div>
           </div>
@@ -423,7 +537,9 @@ export default function App() {
       {formOpen && <MovieForm language={language} movie={formMovie} saving={saving} serverErrors={serverErrors} onClose={() => setFormOpen(false)} onSave={saveMovie} />}
       {batchOpen && <BatchImportDialog language={language} busy={batchImporting} error={batchError} onClose={() => setBatchOpen(false)} onImport={importMovies} onDownloadTemplate={downloadTemplate} />}
       {passwordDialogOpen && <PasswordChangeDialog language={language} username={currentUser.username} busy={changingPassword} error={passwordError} onClose={() => setPasswordDialogOpen(false)} onSave={changePassword} />}
+      {adminUsersOpen && <AdminUsersDialog language={language} users={adminUsers} loading={adminUsersLoading} error={adminUsersError} resetError={adminResetError} busy={adminResetting} onClose={() => setAdminUsersOpen(false)} onReset={resetUserPassword} />}
       {deleteMovie && <ConfirmDialog movie={deleteMovie} busy={deleting} copy={copy} onCancel={() => setDeleteMovie(null)} onConfirm={confirmDelete} />}
+      {deleteAllOpen && <DeleteAllDialog count={movies.length} busy={batchAction === 'delete'} copy={copy} onCancel={() => setDeleteAllOpen(false)} onConfirm={confirmDeleteAll} />}
       {toast && <div className="toast" role="status"><Check size={16} />{toast}</div>}
     </div>
   )

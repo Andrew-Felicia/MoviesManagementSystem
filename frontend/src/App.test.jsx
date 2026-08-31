@@ -19,6 +19,7 @@ function mockAuthenticated(...movieResponses) {
   vi.stubGlobal('fetch', vi.fn((url) => {
     if (url === '/api/auth/me') return Promise.resolve(response(admin))
     if (url === '/api/auth/csrf') return Promise.resolve(response({ token: 'csrf-token', headerName: 'X-XSRF-TOKEN' }))
+    if (url === '/api/admin/stats') return Promise.resolve(response({ userCount: 7 }))
     return Promise.resolve(movieResponses[movieCall++] || response(movies))
   }))
 }
@@ -47,6 +48,56 @@ describe('App', () => {
     expect(screen.getAllByText('Heat').length).toBeGreaterThan(0)
     expect(screen.getByText('2 of 2 titles matched')).toBeInTheDocument()
     expect(screen.getByText('admin')).toBeInTheDocument()
+    expect(screen.getByText('Registered users')).toBeInTheDocument()
+    expect(screen.getByText('7')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Manage users' })).toHaveLength(1)
+  })
+
+  it('does not request or display administrator statistics for regular users', async () => {
+    const member = { username: 'member', role: 'USER' }
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/api/auth/me') return Promise.resolve(response(member))
+      if (url === '/api/movies') return Promise.resolve(response([]))
+      throw new Error(`Unexpected URL: ${url}`)
+    }))
+
+    render(<App />)
+    expect(await screen.findByText('No matching titles')).toBeInTheDocument()
+    expect(screen.queryByText('Registered users')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Manage users' })).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalledWith('/api/admin/stats', expect.anything())
+  })
+
+  it('lets an administrator inspect account summaries and reset a passcode', async () => {
+    const accounts = [
+      { username: 'admin', role: 'ADMIN', createdAt: '2026-08-31T09:30:00', movieCount: 2 },
+      { username: 'member', role: 'USER', createdAt: '2026-08-31T10:30:00', movieCount: 3 },
+    ]
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/api/auth/me') return Promise.resolve(response(admin))
+      if (url === '/api/auth/csrf') return Promise.resolve(response({ token: 'csrf-token' }))
+      if (url === '/api/admin/stats') return Promise.resolve(response({ userCount: 2 }))
+      if (url === '/api/admin/users') return Promise.resolve(response(accounts))
+      if (url === '/api/admin/users/member/password') return Promise.resolve(response(null, 204))
+      if (url === '/api/movies') return Promise.resolve(response(movies))
+      throw new Error(`Unexpected URL: ${url}`)
+    }))
+
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getAllByRole('button', { name: 'Manage users' })[0])
+    expect(await screen.findByRole('dialog', { name: 'Account management' })).toBeInTheDocument()
+    expect(screen.getByText('member')).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.queryByText('original-passcode')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Reset passcode' })[1])
+    await userEvent.type(screen.getByLabelText('New passcode'), 'replacement-passcode')
+    await userEvent.type(screen.getByLabelText('Confirm new passcode'), 'replacement-passcode')
+    await userEvent.click(screen.getAllByRole('button', { name: 'Reset passcode' }).at(-1))
+
+    expect(await screen.findByText('Passcode reset for member')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/admin/users/member/password', expect.objectContaining({ method: 'PUT' }))
   })
 
   it('moves and resets the hero spotlight with the pointer', async () => {
@@ -87,6 +138,44 @@ describe('App', () => {
     expect(screen.queryByRole('dialog', { name: 'Change passcode' })).not.toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ method: 'PUT' }))
     expect(storeCredential).toHaveBeenCalledWith(expect.objectContaining({ id: 'admin', password: 'unique-passcode' }))
+  })
+
+  it('marks every movie in the current library as watched with one batch request', async () => {
+    mockAuthenticated(response(movies), response({ affectedCount: 1 }))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Watch all' }))
+
+    expect(await screen.findByText('1 movie marked as watched')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch/watched', expect.objectContaining({ method: 'PUT' }))
+    expect(screen.getByText('100% complete')).toBeInTheDocument()
+  })
+
+  it('moves every watched movie in the current library back to the watchlist with one batch request', async () => {
+    mockAuthenticated(response(movies), response({ affectedCount: 1 }))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Unwatch all' }))
+
+    expect(await screen.findByText('1 movie moved to watchlist')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch/unwatched', expect.objectContaining({ method: 'PUT' }))
+    expect(screen.getByText('0% complete')).toBeInTheDocument()
+  })
+
+  it('requires confirmation before deleting the current users complete library', async () => {
+    mockAuthenticated(response(movies), response({ affectedCount: 2 }))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Delete all' }))
+
+    expect(screen.getByRole('alertdialog', { name: 'Delete all 2 movies?' })).toBeInTheDocument()
+    expect(screen.getByText(/including films hidden by filters/)).toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalledWith('/api/movies/batch', expect.objectContaining({ method: 'DELETE' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete all movies' }))
+
+    expect(await screen.findByText('2 movies deleted')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/movies/batch', expect.objectContaining({ method: 'DELETE' }))
+    expect(screen.getByText('No matching titles')).toBeInTheDocument()
   })
 
   it('shows twelve movies per page and resets pagination after searching', async () => {
@@ -309,7 +398,7 @@ describe('App', () => {
     render(<App />)
     expect(await screen.findByText('Could not load your library')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(fetch.mock.calls.filter(([url]) => url === '/api/movies')).toHaveLength(2))
   })
 
   it('returns to login if the movie session expires', async () => {

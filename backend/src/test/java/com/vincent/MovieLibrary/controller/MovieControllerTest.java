@@ -1,6 +1,7 @@
 package com.vincent.MovieLibrary.controller;
 
 import com.vincent.MovieLibrary.dto.MovieBatchRequest;
+import com.vincent.MovieLibrary.dto.MovieBatchOperationResponse;
 import com.vincent.MovieLibrary.dto.MovieBatchResponse;
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.dto.MovieResponse;
@@ -16,9 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(MovieController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class MovieControllerTest {
+
+    private static final Authentication ADMIN = new TestingAuthenticationToken("admin", "unused");
 
     private static final String VALID_REQUEST_JSON = """
             {
@@ -57,12 +63,12 @@ class MovieControllerTest {
 
     @Test
     void getAllMoviesReturnsJsonArray() throws Exception {
-        when(movieService.getAllMovies()).thenReturn(List.of(
+        when(movieService.getAllMovies("admin")).thenReturn(List.of(
                 response(1, "Interstellar"),
                 response(2, "Arrival")
         ));
 
-        mockMvc.perform(get("/api/movies"))
+        mockMvc.perform(get("/api/movies").principal(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -73,18 +79,18 @@ class MovieControllerTest {
 
     @Test
     void getAllMoviesAcceptsTrailingSlash() throws Exception {
-        when(movieService.getAllMovies()).thenReturn(List.of());
+        when(movieService.getAllMovies("admin")).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/movies/"))
+        mockMvc.perform(get("/api/movies/").principal(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
     void getMovieByIdReturnsMovieJson() throws Exception {
-        when(movieService.getMovieById(9)).thenReturn(response(9, "Dune"));
+        when(movieService.getMovieById("admin", 9)).thenReturn(response(9, "Dune"));
 
-        mockMvc.perform(get("/api/movies/9"))
+        mockMvc.perform(get("/api/movies/9").principal(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(9))
                 .andExpect(jsonPath("$.title").value("Dune"))
@@ -95,37 +101,39 @@ class MovieControllerTest {
 
     @Test
     void getMovieByIdReturns404WhenMovieIsMissing() throws Exception {
-        when(movieService.getMovieById(404))
+        when(movieService.getMovieById("admin", 404))
                 .thenThrow(new MovieNotFoundException(404));
 
-        mockMvc.perform(get("/api/movies/404"))
+        mockMvc.perform(get("/api/movies/404").principal(ADMIN))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void createMovieReturns201AndResponseBody() throws Exception {
         MovieRequest expectedRequest = validRequest();
-        when(movieService.createMovie(expectedRequest))
+        when(movieService.createMovie("admin", expectedRequest))
                 .thenReturn(response(11, "Interstellar"));
 
         mockMvc.perform(post("/api/movies")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_REQUEST_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(11))
                 .andExpect(jsonPath("$.title").value("Interstellar"));
 
-        verify(movieService).createMovie(expectedRequest);
+        verify(movieService).createMovie("admin", expectedRequest);
     }
 
     @Test
     void batchCreateReturnsImportSummary() throws Exception {
         MovieBatchRequest request = new MovieBatchRequest(List.of(validRequest()));
-        when(movieService.createMovies(request)).thenReturn(
+        when(movieService.createMovies("admin", request)).thenReturn(
                 new MovieBatchResponse(1, 0, List.of(response(21, "Interstellar")))
         );
 
         mockMvc.perform(post("/api/movies/batch")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"movies": [%s]}
@@ -135,12 +143,13 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.skippedDuplicates").value(0))
                 .andExpect(jsonPath("$.movies[0].title").value("Interstellar"));
 
-        verify(movieService).createMovies(request);
+        verify(movieService).createMovies("admin", request);
     }
 
     @Test
     void batchCreateRejectsEmptyAndInvalidBatches() throws Exception {
         mockMvc.perform(post("/api/movies/batch")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"movies\": []}"))
                 .andExpect(status().isBadRequest())
@@ -148,45 +157,71 @@ class MovieControllerTest {
                         .value("At least one movie is required"));
 
         mockMvc.perform(post("/api/movies/batch")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"movies\": [{}]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors['movies[0].title']")
                         .value("Title is required"));
 
-        verify(movieService, never()).createMovies(any());
+        verify(movieService, never()).createMovies(anyString(), any());
+    }
+
+    @Test
+    void batchActionsReturnAffectedMovieCounts() throws Exception {
+        when(movieService.markAllMoviesWatched("admin"))
+                .thenReturn(new MovieBatchOperationResponse(3));
+        when(movieService.markAllMoviesUnwatched("admin"))
+                .thenReturn(new MovieBatchOperationResponse(2));
+        when(movieService.deleteAllMovies("admin"))
+                .thenReturn(new MovieBatchOperationResponse(5));
+
+        mockMvc.perform(put("/api/movies/batch/watched").principal(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.affectedCount").value(3));
+        mockMvc.perform(put("/api/movies/batch/unwatched").principal(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.affectedCount").value(2));
+        mockMvc.perform(delete("/api/movies/batch").principal(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.affectedCount").value(5));
+
+        verify(movieService).markAllMoviesWatched("admin");
+        verify(movieService).markAllMoviesUnwatched("admin");
+        verify(movieService).deleteAllMovies("admin");
     }
 
     @Test
     void updateMovieReturnsUpdatedResponse() throws Exception {
         MovieRequest expectedRequest = validRequest();
-        when(movieService.updateMovie(11, expectedRequest))
+        when(movieService.updateMovie("admin", 11, expectedRequest))
                 .thenReturn(response(11, "Interstellar"));
 
         mockMvc.perform(put("/api/movies/11")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_REQUEST_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(11))
                 .andExpect(jsonPath("$.title").value("Interstellar"));
 
-        verify(movieService).updateMovie(11, expectedRequest);
+        verify(movieService).updateMovie("admin", 11, expectedRequest);
     }
 
     @Test
     void deleteMovieReturns204() throws Exception {
-        mockMvc.perform(delete("/api/movies/6"))
+        mockMvc.perform(delete("/api/movies/6").principal(ADMIN))
                 .andExpect(status().isNoContent());
 
-        verify(movieService).deleteMovie(6);
+        verify(movieService).deleteMovie("admin", 6);
     }
 
     @Test
     void deleteMovieReturns404WhenMovieIsMissing() throws Exception {
         org.mockito.Mockito.doThrow(new MovieNotFoundException(6))
-                .when(movieService).deleteMovie(6);
+                .when(movieService).deleteMovie("admin", 6);
 
-        mockMvc.perform(delete("/api/movies/6"))
+        mockMvc.perform(delete("/api/movies/6").principal(ADMIN))
                 .andExpect(status().isNotFound());
     }
 
@@ -208,6 +243,7 @@ class MovieControllerTest {
                 """;
 
         mockMvc.perform(post("/api/movies")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
                 .andExpect(status().isBadRequest())
@@ -225,30 +261,32 @@ class MovieControllerTest {
                 .andExpect(jsonPath("$.fieldErrors.personalRating")
                         .value("Personal rating must not exceed 10.0"));
 
-        verify(movieService, never()).createMovie(any());
+        verify(movieService, never()).createMovie(anyString(), any());
     }
 
     @Test
     void malformedJsonReturns400WithoutCallingService() throws Exception {
         mockMvc.perform(post("/api/movies")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{not-valid-json"))
                 .andExpect(status().isBadRequest());
 
-        verify(movieService, never()).createMovie(any());
+        verify(movieService, never()).createMovie(anyString(), any());
     }
 
     @Test
     void nonNumericMovieIdReturns400() throws Exception {
-        mockMvc.perform(get("/api/movies/not-a-number"))
+        mockMvc.perform(get("/api/movies/not-a-number").principal(ADMIN))
                 .andExpect(status().isBadRequest());
 
-        verify(movieService, never()).getMovieById(any());
+        verify(movieService, never()).getMovieById(anyString(), any());
     }
 
     @Test
     void unsupportedHttpMethodReturns405() throws Exception {
         mockMvc.perform(patch("/api/movies/1")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_REQUEST_JSON))
                 .andExpect(status().isMethodNotAllowed());
@@ -256,10 +294,10 @@ class MovieControllerTest {
 
     @Test
     void requestWithoutJsonContentTypeReturns415() throws Exception {
-        mockMvc.perform(post("/api/movies").content(VALID_REQUEST_JSON))
+        mockMvc.perform(post("/api/movies").principal(ADMIN).content(VALID_REQUEST_JSON))
                 .andExpect(status().isUnsupportedMediaType());
 
-        verify(movieService, never()).createMovie(any());
+        verify(movieService, never()).createMovie(anyString(), any());
     }
 
     @Test
@@ -278,32 +316,34 @@ class MovieControllerTest {
                   "notes": null
                 }
                 """;
-        when(movieService.createMovie(any(MovieRequest.class)))
+        when(movieService.createMovie(anyString(), any(MovieRequest.class)))
                 .thenReturn(new MovieResponse(
                         12, "Unrated", 2026, "Director", "Drama", 90,
                         "English", false, null, "/movies/unrated.mkv",
                         null, null));
 
         mockMvc.perform(post("/api/movies")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.personalRating").doesNotExist())
                 .andExpect(jsonPath("$.notes").doesNotExist());
 
-        verify(movieService).createMovie(any(MovieRequest.class));
+        verify(movieService).createMovie(anyString(), any(MovieRequest.class));
     }
 
     @Test
     void invalidUpdateDoesNotCallService() throws Exception {
         mockMvc.perform(put("/api/movies/3")
+                        .principal(ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.title")
                         .value("Title is required"));
 
-        verify(movieService, never()).updateMovie(any(), any());
+        verify(movieService, never()).updateMovie(anyString(), any(), any());
     }
 
     private static MovieRequest validRequest() {

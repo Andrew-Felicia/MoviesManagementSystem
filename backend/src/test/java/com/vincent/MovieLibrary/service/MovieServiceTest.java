@@ -1,12 +1,15 @@
 package com.vincent.MovieLibrary.service;
 
 import com.vincent.MovieLibrary.dto.MovieBatchRequest;
+import com.vincent.MovieLibrary.dto.MovieBatchOperationResponse;
 import com.vincent.MovieLibrary.dto.MovieBatchResponse;
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.dto.MovieResponse;
 import com.vincent.MovieLibrary.entity.Movie;
+import com.vincent.MovieLibrary.entity.UserAccount;
 import com.vincent.MovieLibrary.exception.MovieNotFoundException;
 import com.vincent.MovieLibrary.repository.MovieRepository;
+import com.vincent.MovieLibrary.repository.UserAccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,48 +33,52 @@ class MovieServiceTest {
 
     private static final LocalDateTime CREATED_AT =
             LocalDateTime.of(2026, 8, 21, 10, 30);
+    private static final String USERNAME = "alice";
 
     @Mock
     private MovieRepository movieRepository;
+
+    @Mock
+    private UserAccountRepository userAccountRepository;
 
     private MovieService movieService;
 
     @BeforeEach
     void setUp() {
-        movieService = new MovieService(movieRepository);
+        movieService = new MovieService(movieRepository, userAccountRepository);
     }
 
     @Test
     void getAllMoviesReturnsMappedResponses() {
         Movie first = movie(1, "Interstellar", 2014, true, 9.8);
         Movie second = movie(2, "Arrival", 2016, false, null);
-        when(movieRepository.findAll()).thenReturn(List.of(first, second));
+        when(movieRepository.findAllByOwner_UsernameIgnoreCase(USERNAME)).thenReturn(List.of(first, second));
 
-        List<MovieResponse> result = movieService.getAllMovies();
+        List<MovieResponse> result = movieService.getAllMovies(USERNAME);
 
         assertThat(result).containsExactly(response(first), response(second));
     }
 
     @Test
     void getAllMoviesReturnsEmptyListWhenRepositoryIsEmpty() {
-        when(movieRepository.findAll()).thenReturn(List.of());
+        when(movieRepository.findAllByOwner_UsernameIgnoreCase(USERNAME)).thenReturn(List.of());
 
-        assertThat(movieService.getAllMovies()).isEmpty();
+        assertThat(movieService.getAllMovies(USERNAME)).isEmpty();
     }
 
     @Test
     void getMovieByIdReturnsMappedResponse() {
         Movie movie = movie(7, "Dune", 2021, true, 8.7);
-        when(movieRepository.findById(7)).thenReturn(Optional.of(movie));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(7, USERNAME)).thenReturn(Optional.of(movie));
 
-        assertThat(movieService.getMovieById(7)).isEqualTo(response(movie));
+        assertThat(movieService.getMovieById(USERNAME, 7)).isEqualTo(response(movie));
     }
 
     @Test
     void getMovieByIdThrowsWhenMovieDoesNotExist() {
-        when(movieRepository.findById(404)).thenReturn(Optional.empty());
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(404, USERNAME)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> movieService.getMovieById(404))
+        assertThatThrownBy(() -> movieService.getMovieById(USERNAME, 404))
                 .isInstanceOf(MovieNotFoundException.class)
                 .hasMessage("Movie not found with id: 404");
     }
@@ -80,6 +87,7 @@ class MovieServiceTest {
     void createMovieCopiesEveryRequestFieldAndReturnsSavedMovie() {
         MovieRequest request = request("Blade Runner", 1982, false, 9.1,
                 "A visual classic.");
+        UserAccount owner = stubOwner();
         when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
             Movie saved = invocation.getArgument(0);
             saved.setId(12);
@@ -87,10 +95,11 @@ class MovieServiceTest {
             return saved;
         });
 
-        MovieResponse result = movieService.createMovie(request);
+        MovieResponse result = movieService.createMovie(USERNAME, request);
 
         ArgumentCaptor<Movie> captor = ArgumentCaptor.forClass(Movie.class);
         verify(movieRepository).save(captor.capture());
+        assertThat(captor.getValue().getOwner()).isSameAs(owner);
         assertMovieMatchesRequest(captor.getValue(), request);
         assertThat(result.id()).isEqualTo(12);
         assertThat(result.createdAt()).isEqualTo(CREATED_AT);
@@ -100,13 +109,14 @@ class MovieServiceTest {
     @Test
     void createMovieSupportsOptionalRatingAndNotes() {
         MovieRequest request = request("Unwatched", 2025, false, null, null);
+        stubOwner();
         when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> {
             Movie saved = invocation.getArgument(0);
             saved.setId(13);
             return saved;
         });
 
-        MovieResponse result = movieService.createMovie(request);
+        MovieResponse result = movieService.createMovie(USERNAME, request);
 
         assertThat(result.personalRating()).isNull();
         assertThat(result.notes()).isNull();
@@ -127,14 +137,15 @@ class MovieServiceTest {
         MovieRequest unique = request("Arrival", 2016, false, 8.8, "First contact");
         MovieRequest repeatedUnique = request("ARRIVAL", 2016, false, 8.8, null);
 
-        when(movieRepository.findAll()).thenReturn(List.of(existing));
+        UserAccount owner = stubOwner();
+        when(movieRepository.findAllByOwner_UsernameIgnoreCase(USERNAME)).thenReturn(List.of(existing));
         when(movieRepository.saveAll(any())).thenAnswer(invocation -> {
             List<Movie> saved = invocation.getArgument(0);
             saved.getFirst().setId(20);
             return saved;
         });
 
-        MovieBatchResponse result = movieService.createMovies(
+        MovieBatchResponse result = movieService.createMovies(USERNAME,
                 new MovieBatchRequest(List.of(existingDuplicate, unique, repeatedUnique))
         );
 
@@ -142,17 +153,21 @@ class MovieServiceTest {
         assertThat(result.skippedDuplicates()).isEqualTo(2);
         assertThat(result.movies()).extracting(MovieResponse::title)
                 .containsExactly("Arrival");
-        verify(movieRepository).saveAll(any());
+        assertThat(result.movies()).hasSize(1);
+        ArgumentCaptor<List<Movie>> moviesCaptor = ArgumentCaptor.forClass(List.class);
+        verify(movieRepository).saveAll(moviesCaptor.capture());
+        assertThat(moviesCaptor.getValue()).allMatch(movie -> movie.getOwner() == owner);
     }
 
     @Test
     void createMoviesSupportsABatchWithNoDuplicates() {
         MovieRequest first = request("Arrival", 2016, false, null, null);
         MovieRequest second = request("Dune", 2021, true, 8.9, "Epic");
-        when(movieRepository.findAll()).thenReturn(List.of());
+        stubOwner();
+        when(movieRepository.findAllByOwner_UsernameIgnoreCase(USERNAME)).thenReturn(List.of());
         when(movieRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        MovieBatchResponse result = movieService.createMovies(
+        MovieBatchResponse result = movieService.createMovies(USERNAME,
                 new MovieBatchRequest(List.of(first, second))
         );
 
@@ -167,10 +182,10 @@ class MovieServiceTest {
         Movie existing = movie(3, "Old title", 1990, false, 4.0);
         MovieRequest request = request("New title", 2020, true, 8.4,
                 "Updated notes");
-        when(movieRepository.findById(3)).thenReturn(Optional.of(existing));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(3, USERNAME)).thenReturn(Optional.of(existing));
         when(movieRepository.save(existing)).thenReturn(existing);
 
-        MovieResponse result = movieService.updateMovie(3, request);
+        MovieResponse result = movieService.updateMovie(USERNAME, 3, request);
 
         verify(movieRepository).save(existing);
         assertMovieMatchesRequest(existing, request);
@@ -181,10 +196,10 @@ class MovieServiceTest {
 
     @Test
     void updateMovieDoesNotSaveWhenMovieIsMissing() {
-        when(movieRepository.findById(88)).thenReturn(Optional.empty());
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(88, USERNAME)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> movieService.updateMovie(
-                88, request("Missing", 2020, false, null, null)))
+                USERNAME, 88, request("Missing", 2020, false, null, null)))
                 .isInstanceOf(MovieNotFoundException.class);
         verify(movieRepository, never()).save(any());
     }
@@ -192,20 +207,57 @@ class MovieServiceTest {
     @Test
     void deleteMovieDeletesTheExistingEntity() {
         Movie movie = movie(5, "Delete me", 2001, true, 6.0);
-        when(movieRepository.findById(5)).thenReturn(Optional.of(movie));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(5, USERNAME)).thenReturn(Optional.of(movie));
 
-        movieService.deleteMovie(5);
+        movieService.deleteMovie(USERNAME, 5);
 
         verify(movieRepository).delete(movie);
     }
 
     @Test
     void deleteMovieDoesNotDeleteWhenMovieIsMissing() {
-        when(movieRepository.findById(99)).thenReturn(Optional.empty());
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(99, USERNAME)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> movieService.deleteMovie(99))
+        assertThatThrownBy(() -> movieService.deleteMovie(USERNAME, 99))
                 .isInstanceOf(MovieNotFoundException.class);
         verify(movieRepository, never()).delete(any());
+    }
+
+    @Test
+    void batchActionsDelegateToOwnerScopedRepositoryOperations() {
+        when(movieRepository.markAllWatchedByOwnerUsername(USERNAME)).thenReturn(3);
+        when(movieRepository.markAllUnwatchedByOwnerUsername(USERNAME)).thenReturn(2);
+        when(movieRepository.deleteAllByOwnerUsername(USERNAME)).thenReturn(5);
+
+        assertThat(movieService.markAllMoviesWatched(USERNAME))
+                .isEqualTo(new MovieBatchOperationResponse(3));
+        assertThat(movieService.markAllMoviesUnwatched(USERNAME))
+                .isEqualTo(new MovieBatchOperationResponse(2));
+        assertThat(movieService.deleteAllMovies(USERNAME))
+                .isEqualTo(new MovieBatchOperationResponse(5));
+
+        verify(movieRepository).markAllWatchedByOwnerUsername(USERNAME);
+        verify(movieRepository).markAllUnwatchedByOwnerUsername(USERNAME);
+        verify(movieRepository).deleteAllByOwnerUsername(USERNAME);
+    }
+
+    @Test
+    void createMovieFailsIfAuthenticatedAccountWasRemoved() {
+        when(userAccountRepository.findByUsernameIgnoreCase(USERNAME)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> movieService.createMovie(
+                USERNAME, request("Orphan", 2020, false, null, null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Authenticated account no longer exists");
+        verify(movieRepository, never()).save(any());
+    }
+
+    private UserAccount stubOwner() {
+        UserAccount owner = new UserAccount();
+        owner.setId(42L);
+        owner.setUsername(USERNAME);
+        when(userAccountRepository.findByUsernameIgnoreCase(USERNAME)).thenReturn(Optional.of(owner));
+        return owner;
     }
 
     private static Movie movie(

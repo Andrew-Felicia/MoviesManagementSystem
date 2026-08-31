@@ -108,6 +108,69 @@ class AuthenticationIntegrationIT {
     }
 
     @Test
+    void onlyAdministratorsCanReadUserStatistics() throws Exception {
+        mockMvc.perform(get("/api/admin/stats").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userCount").isNumber());
+
+        mockMvc.perform(get("/api/admin/stats").with(user("member").roles("USER")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("Request could not be verified"));
+
+        mockMvc.perform(get("/api/admin/stats"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Authentication required"));
+    }
+
+    @Test
+    void onlyAdministratorsCanManageAccountsAndResetPasscodes() throws Exception {
+        String username = "managed-account";
+        userAccountRepository.findByUsernameIgnoreCase(username).ifPresent(userAccountRepository::delete);
+        UserAccount account = new UserAccount();
+        account.setUsername(username);
+        account.setPasswordHash(passwordEncoder.encode("original-passcode"));
+        account.setRole("USER");
+        account.setEnabled(true);
+        account.setCreatedAt(java.time.LocalDateTime.now());
+        userAccountRepository.saveAndFlush(account);
+
+        try {
+            mockMvc.perform(get("/api/admin/users").with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.username == 'managed-account')].role").value("USER"))
+                    .andExpect(jsonPath("$[?(@.username == 'managed-account')].movieCount").value(0))
+                    .andExpect(jsonPath("$[?(@.username == 'managed-account')].passwordHash").doesNotExist());
+
+            mockMvc.perform(put("/api/admin/users/managed-account/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"newPasscode\":\"admin-reset-passcode\"}"))
+                    .andExpect(status().isNoContent());
+            assertThat(passwordEncoder.matches(
+                    "admin-reset-passcode",
+                    userAccountRepository.findByUsernameIgnoreCase(username).orElseThrow().getPasswordHash()
+            )).isTrue();
+
+            mockMvc.perform(get("/api/admin/users").with(user("member").roles("USER")))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(put("/api/admin/users/managed-account/password")
+                            .with(user("member").roles("USER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"newPasscode\":\"blocked\"}"))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(put("/api/admin/users/managed-account/password")
+                            .with(user("admin").roles("ADMIN"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"newPasscode\":\"missing-csrf\"}"))
+                    .andExpect(status().isForbidden());
+        } finally {
+            userAccountRepository.findByUsernameIgnoreCase(username).ifPresent(userAccountRepository::delete);
+        }
+    }
+
+    @Test
     void administratorCanLoginUseSessionAndLogout() throws Exception {
         mockMvc.perform(get("/api/auth/csrf"))
                 .andExpect(status().isOk())

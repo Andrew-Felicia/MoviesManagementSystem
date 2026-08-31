@@ -37,6 +37,9 @@ export const movieApi = {
   list: () => request(),
   create: (movie) => request('', { method: 'POST', body: JSON.stringify(movie) }),
   createBatch: (movies) => request('/batch', { method: 'POST', body: JSON.stringify({ movies }) }),
+  markAllWatched: () => request('/batch/watched', { method: 'PUT' }),
+  markAllUnwatched: () => request('/batch/unwatched', { method: 'PUT' }),
+  removeAll: () => request('/batch', { method: 'DELETE' }),
   update: (id, movie) => request(`/${id}`, { method: 'PUT', body: JSON.stringify(movie) }),
   remove: (id) => request(`/${id}`, { method: 'DELETE' }),
 }

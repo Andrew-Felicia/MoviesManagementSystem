@@ -73,6 +73,40 @@ export const authApi = {
     }
   },
 
+  async adminStats() {
+    const response = await fetch('/api/admin/stats', { credentials: 'same-origin' })
+    if (!response.ok) {
+      const error = new Error(await readError(response, 'Could not load administrator statistics'))
+      error.status = response.status
+      throw error
+    }
+    return response.json()
+  },
+
+  async adminUsers() {
+    const response = await fetch('/api/admin/users', { credentials: 'same-origin' })
+    if (!response.ok) {
+      const error = new Error(await readError(response, 'Could not load registered accounts'))
+      error.status = response.status
+      throw error
+    }
+    return response.json()
+  },
+
+  async resetUserPassword(username, newPasscode) {
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}/password`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...await getCsrfHeader() },
+      body: JSON.stringify({ newPasscode }),
+    })
+    if (!response.ok) {
+      const error = new Error(await readError(response, 'Could not reset passcode'))
+      error.status = response.status
+      throw error
+    }
+  },
+
   async logout() {
     const response = await fetch(`${AUTH_URL}/logout`, {
       method: 'POST',

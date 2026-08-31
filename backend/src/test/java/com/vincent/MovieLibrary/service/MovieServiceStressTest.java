@@ -2,7 +2,9 @@ package com.vincent.MovieLibrary.service;
 
 import com.vincent.MovieLibrary.dto.MovieRequest;
 import com.vincent.MovieLibrary.entity.Movie;
+import com.vincent.MovieLibrary.entity.UserAccount;
 import com.vincent.MovieLibrary.repository.MovieRepository;
+import com.vincent.MovieLibrary.repository.UserAccountRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,45 +28,51 @@ class MovieServiceStressTest {
     @Mock
     private MovieRepository movieRepository;
 
+    @Mock
+    private UserAccountRepository userAccountRepository;
+
     private MovieService movieService;
     private Movie movie;
     private MovieRequest request;
 
     @BeforeEach
     void setUp() {
-        movieService = new MovieService(movieRepository);
+        movieService = new MovieService(movieRepository, userAccountRepository);
         movie = movie();
         request = request();
     }
 
     @Test
     void getAllMoviesMapsLargeResultSet() {
-        when(movieRepository.findAll())
+        when(movieRepository.findAllByOwner_UsernameIgnoreCase("stress-user"))
                 .thenReturn(Collections.nCopies(ITERATIONS, movie));
 
         assertTimeout(Duration.ofSeconds(10), () ->
-                assertThat(movieService.getAllMovies()).hasSize(ITERATIONS));
+                assertThat(movieService.getAllMovies("stress-user")).hasSize(ITERATIONS));
     }
 
     @Test
     void getMovieByIdHandlesRepeatedLookups() {
-        when(movieRepository.findById(1)).thenReturn(Optional.of(movie));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(1, "stress-user")).thenReturn(Optional.of(movie));
 
         assertTimeout(Duration.ofSeconds(10), () -> {
             for (int i = 0; i < ITERATIONS; i++) {
-                assertThat(movieService.getMovieById(1).id()).isEqualTo(1);
+                assertThat(movieService.getMovieById("stress-user", 1).id()).isEqualTo(1);
             }
         });
     }
 
     @Test
     void createMovieHandlesRepeatedCreates() {
+        UserAccount owner = new UserAccount();
+        owner.setUsername("stress-user");
+        when(userAccountRepository.findByUsernameIgnoreCase("stress-user")).thenReturn(Optional.of(owner));
         when(movieRepository.save(any(Movie.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         assertTimeout(Duration.ofSeconds(10), () -> {
             for (int i = 0; i < ITERATIONS; i++) {
-                assertThat(movieService.createMovie(request).title())
+                assertThat(movieService.createMovie("stress-user", request).title())
                         .isEqualTo(request.title());
             }
         });
@@ -72,23 +80,23 @@ class MovieServiceStressTest {
 
     @Test
     void updateMovieHandlesRepeatedUpdates() {
-        when(movieRepository.findById(1)).thenReturn(Optional.of(movie));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(1, "stress-user")).thenReturn(Optional.of(movie));
         when(movieRepository.save(movie)).thenReturn(movie);
 
         assertTimeout(Duration.ofSeconds(10), () -> {
             for (int i = 0; i < ITERATIONS; i++) {
-                assertThat(movieService.updateMovie(1, request).id()).isEqualTo(1);
+                assertThat(movieService.updateMovie("stress-user", 1, request).id()).isEqualTo(1);
             }
         });
     }
 
     @Test
     void deleteMovieHandlesRepeatedDeletes() {
-        when(movieRepository.findById(1)).thenReturn(Optional.of(movie));
+        when(movieRepository.findByIdAndOwner_UsernameIgnoreCase(1, "stress-user")).thenReturn(Optional.of(movie));
 
         assertTimeout(Duration.ofSeconds(10), () -> {
             for (int i = 0; i < ITERATIONS; i++) {
-                movieService.deleteMovie(1);
+                movieService.deleteMovie("stress-user", 1);
             }
         });
     }

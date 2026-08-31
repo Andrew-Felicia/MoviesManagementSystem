@@ -23,6 +23,10 @@ public class Movie {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id; //we don't use int here,because id maybe null.
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserAccount owner;
+
     private String title;
 
     @Column(name = "release_year")

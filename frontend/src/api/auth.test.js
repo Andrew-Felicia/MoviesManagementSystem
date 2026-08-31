@@ -102,6 +102,48 @@ describe('authApi', () => {
     await expect(authApi.changePassword('wrong', 'new')).rejects.toThrow('Current passcode is incorrect')
   })
 
+  it('loads administrator statistics', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ userCount: 42 })))
+
+    await expect(authApi.adminStats()).resolves.toEqual({ userCount: 42 })
+    expect(fetch).toHaveBeenCalledWith('/api/admin/stats', { credentials: 'same-origin' })
+  })
+
+  it('rejects administrator statistics for unauthorized users', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ error: 'Request could not be verified' }, 403)))
+
+    await expect(authApi.adminStats()).rejects.toMatchObject({ message: 'Request could not be verified', status: 403 })
+  })
+
+  it('loads safe administrator account summaries', async () => {
+    const users = [{ username: 'member', role: 'USER', createdAt: '2026-08-31T10:30:00', movieCount: 3 }]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(users)))
+
+    await expect(authApi.adminUsers()).resolves.toEqual(users)
+    expect(fetch).toHaveBeenCalledWith('/api/admin/users', { credentials: 'same-origin' })
+  })
+
+  it('resets a member passcode with JSON and CSRF', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => url.endsWith('/csrf')
+      ? Promise.resolve(response({ token: 'csrf-token' }))
+      : Promise.resolve(response(null, 204))))
+
+    await expect(authApi.resetUserPassword('film fan', 'replacement-passcode')).resolves.toBeUndefined()
+    expect(fetch).toHaveBeenCalledWith('/api/admin/users/film%20fan/password', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': 'csrf-token' },
+      body: JSON.stringify({ newPasscode: 'replacement-passcode' }),
+    }))
+  })
+
+  it('reports a rejected administrator passcode reset', async () => {
+    vi.stubGlobal('fetch', vi.fn((url) => url.endsWith('/csrf')
+      ? Promise.resolve(response({ token: 'csrf-token' }))
+      : Promise.resolve(response({ error: 'New passcode must be different' }, 400))))
+
+    await expect(authApi.resetUserPassword('member', 'same')).rejects.toMatchObject({ message: 'New passcode must be different', status: 400 })
+  })
+
   it('falls back when an error response is not JSON', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, json: () => Promise.reject(new Error('not JSON')) }))
     await expect(authApi.me()).rejects.toMatchObject({ message: 'Authentication required', status: 503 })

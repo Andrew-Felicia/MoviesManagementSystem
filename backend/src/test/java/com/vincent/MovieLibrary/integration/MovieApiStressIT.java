@@ -12,6 +12,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Duration;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MovieApiStressIT {
 
     private static final int MOVIE_COUNT = 250;
+    private static final Authentication ADMIN = new TestingAuthenticationToken("admin", "unused");
 
     @Autowired
     private MockMvc mockMvc;
@@ -47,12 +50,13 @@ class MovieApiStressIT {
         assertTimeout(Duration.ofSeconds(90), () -> {
             for (int i = 0; i < MOVIE_COUNT; i++) {
                 mockMvc.perform(post("/api/movies")
+                                .principal(ADMIN)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(requestJson("Stress " + i, false)))
                         .andExpect(status().isCreated());
             }
 
-            mockMvc.perform(get("/api/movies"))
+            mockMvc.perform(get("/api/movies").principal(ADMIN))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(MOVIE_COUNT)));
 
@@ -62,12 +66,13 @@ class MovieApiStressIT {
             assertThat(ids).hasSize(MOVIE_COUNT);
 
             for (Integer id : ids) {
-                mockMvc.perform(get("/api/movies/{id}", id))
+                mockMvc.perform(get("/api/movies/{id}", id).principal(ADMIN))
                         .andExpect(status().isOk());
             }
 
             for (int i = 0; i < ids.size(); i++) {
                 mockMvc.perform(put("/api/movies/{id}", ids.get(i))
+                                .principal(ADMIN)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(requestJson("Updated " + i, true)))
                         .andExpect(status().isOk())
@@ -75,7 +80,7 @@ class MovieApiStressIT {
             }
 
             for (Integer id : ids) {
-                mockMvc.perform(delete("/api/movies/{id}", id))
+                mockMvc.perform(delete("/api/movies/{id}", id).principal(ADMIN))
                         .andExpect(status().isNoContent());
             }
 
