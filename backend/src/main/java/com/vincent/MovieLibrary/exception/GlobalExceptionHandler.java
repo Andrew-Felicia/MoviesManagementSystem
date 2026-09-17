@@ -15,6 +15,13 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidPosterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, Object> handleInvalidPoster(InvalidPosterException exception) {
+        return Map.of("status", 400, "error", exception.getMessage(),
+                "fieldErrors", Map.of("posterUrl", exception.getMessage()));
+    }
+
     @ExceptionHandler(InvalidPasscodeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleInvalidPasscode(InvalidPasscodeException exception) {

@@ -24,5 +24,6 @@ CREATE TABLE IF NOT EXISTS movies (
 );
 
 ALTER TABLE movies ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id);
+ALTER TABLE movies ADD COLUMN IF NOT EXISTS poster_url TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_movies_user_id ON movies(user_id);

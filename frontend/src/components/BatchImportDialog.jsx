@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { FileDown, FileSpreadsheet, Upload, X } from 'lucide-react'
-import { MOVIE_CSV_HEADERS, parseMoviesCsv } from '../utils/movieCsv'
+import { REQUIRED_MOVIE_CSV_HEADERS, parseMoviesCsv } from '../utils/movieCsv'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_FILE_SIZE = 100 * 1024 * 1024
 
 const COPY = {
   en: {
-    close: 'Close batch import', eyebrow: 'Bulk library tools', title: 'Import movies from CSV', intro: 'Choose a UTF-8 CSV file. Every valid movie is imported together, and duplicate entries are skipped.', choose: 'Choose CSV file', replace: 'Choose another file', limit: 'CSV only · up to 5 MB · maximum 5,000 movies', ready: (count) => `${count} ${count === 1 ? 'movie' : 'movies'} ready to import`, columns: 'Required columns', template: 'Download CSV template', cancel: 'Cancel', importing: 'Importing…', import: (count) => `Import ${count} ${count === 1 ? 'movie' : 'movies'}`, tooLarge: 'The CSV file must not exceed 5 MB.', readError: (message) => `Could not read this CSV: ${message}`,
+    posterColumn: 'Optional: posterUrl', posterHelp: 'The optional posterUrl column accepts embedded PNG, JPEG, or WebP image data. Image URLs are downloaded and saved in your database on import. Exports include the images themselves.',
+    close: 'Close batch import', eyebrow: 'Bulk library tools', title: 'Import movies from CSV', intro: 'Choose a UTF-8 CSV file. Every valid movie is imported together, and duplicate entries are skipped.', choose: 'Choose CSV file', replace: 'Choose another file', limit: 'CSV only · up to 100 MB · maximum 5,000 movies', ready: (count) => `${count} ${count === 1 ? 'movie' : 'movies'} ready to import`, columns: 'Required columns', template: 'Download CSV template', cancel: 'Cancel', importing: 'Importing…', import: (count) => `Import ${count} ${count === 1 ? 'movie' : 'movies'}`, tooLarge: 'The CSV file must not exceed 100 MB.', readError: (message) => `Could not read this CSV: ${message}`,
   },
   zh: {
-    close: '关闭批量导入', eyebrow: '片库批量工具', title: '从 CSV 导入电影', intro: '请选择 UTF-8 CSV 文件。所有有效电影会一次性导入，重复记录将自动跳过。', choose: '选择 CSV 文件', replace: '选择其他文件', limit: '仅支持 CSV · 最大 5 MB · 最多 5,000 部电影', ready: (count) => `已有 ${count} 部电影可以导入`, columns: '必需字段', template: '下载 CSV 模板', cancel: '取消', importing: '正在导入…', import: (count) => `导入 ${count} 部电影`, tooLarge: 'CSV 文件不能超过 5 MB。', readError: (message) => `无法读取该 CSV：${message}`,
+    posterColumn: '选填：posterUrl', posterHelp: '选填 posterUrl 列可包含 PNG、JPEG 或 WebP 图片数据。导入图片网址时，系统会下载海报并存入数据库；导出的 CSV 包含图片本身。',
+    close: '关闭批量导入', eyebrow: '片库批量工具', title: '从 CSV 导入电影', intro: '请选择 UTF-8 CSV 文件。所有有效电影会一次性导入，重复记录将自动跳过。', choose: '选择 CSV 文件', replace: '选择其他文件', limit: '仅支持 CSV · 最大 100 MB · 最多 5,000 部电影', ready: (count) => `已有 ${count} 部电影可以导入`, columns: '必需字段', template: '下载 CSV 模板', cancel: '取消', importing: '正在导入…', import: (count) => `导入 ${count} 部电影`, tooLarge: 'CSV 文件不能超过 100 MB。', readError: (message) => `无法读取该 CSV：${message}`,
   }
 }
 
@@ -71,7 +73,7 @@ export default function BatchImportDialog({ language = 'en', busy, error, onClos
           {movies.length > 0 && <div className="batch-ready"><strong>{copy.ready(movies.length)}</strong><span>{movies.slice(0, 3).map((movie) => movie.title).join(' · ')}{movies.length > 3 ? ' …' : ''}</span></div>}
           {(parseError || error) && <div className="login-error" role="alert">{parseError || error}</div>}
 
-          <div className="batch-columns"><strong>{copy.columns}</strong><code>{MOVIE_CSV_HEADERS.join(', ')}</code></div>
+          <div className="batch-columns"><strong>{copy.columns}</strong><code>{REQUIRED_MOVIE_CSV_HEADERS.join(', ')}</code><strong>{copy.posterColumn}</strong><p>{copy.posterHelp}</p></div>
           <button className="batch-template" type="button" onClick={onDownloadTemplate}><FileDown size={15} />{copy.template}</button>
 
           <footer className="modal-actions">

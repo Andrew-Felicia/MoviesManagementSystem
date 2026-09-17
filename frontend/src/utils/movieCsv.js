@@ -1,4 +1,6 @@
-export const MOVIE_CSV_HEADERS = [
+import { isValidPoster } from './moviePoster'
+
+export const REQUIRED_MOVIE_CSV_HEADERS = [
   'title',
   'releaseYear',
   'director',
@@ -10,6 +12,7 @@ export const MOVIE_CSV_HEADERS = [
   'filePath',
   'notes',
 ]
+export const MOVIE_CSV_HEADERS = [...REQUIRED_MOVIE_CSV_HEADERS, 'posterUrl']
 
 const MAX_BATCH_SIZE = 5000
 
@@ -31,35 +34,41 @@ function parseRows(csv) {
   let row = []
   let field = ''
   let quoted = false
+  let start = 0
 
   for (let index = 0; index < csv.length; index += 1) {
     const character = csv[index]
     if (quoted) {
       if (character === '"' && csv[index + 1] === '"') {
-        field += '"'
+        field += csv.slice(start, index) + '"'
         index += 1
+        start = index + 1
       } else if (character === '"') {
+        field += csv.slice(start, index)
         quoted = false
-      } else {
-        field += character
+        start = index + 1
       }
-    } else if (character === '"' && field === '') {
+    } else if (character === '"' && field === '' && index === start) {
       quoted = true
+      start = index + 1
     } else if (character === ',') {
-      row.push(field)
+      row.push(field + csv.slice(start, index))
       field = ''
+      start = index + 1
     } else if (character === '\n') {
-      row.push(field)
+      row.push(field + csv.slice(start, index))
       if (row.some((cell) => cell.trim() !== '')) rows.push(row)
       row = []
       field = ''
-    } else if (character !== '\r') {
-      field += character
+      start = index + 1
+    } else if (character === '\r') {
+      field += csv.slice(start, index)
+      start = index + 1
     }
   }
 
   if (quoted) throw new Error('The CSV contains an unfinished quoted value.')
-  row.push(field)
+  row.push(field + csv.slice(start))
   if (row.some((cell) => cell.trim() !== '')) rows.push(row)
   return rows
 }
@@ -82,7 +91,7 @@ export function parseMoviesCsv(csv) {
   if (rows.length < 2) throw new Error('The CSV must contain a header and at least one movie.')
 
   const header = rows[0].map((cell) => cell.trim())
-  const missing = MOVIE_CSV_HEADERS.filter((name) => !header.includes(name))
+  const missing = REQUIRED_MOVIE_CSV_HEADERS.filter((name) => !header.includes(name))
   if (missing.length) throw new Error(`Missing CSV columns: ${missing.join(', ')}`)
 
   const dataRows = rows.slice(1)
@@ -92,6 +101,8 @@ export function parseMoviesCsv(csv) {
     const rowNumber = index + 2
     const value = (name) => cells[header.indexOf(name)] ?? ''
     const rating = value('personalRating').trim()
+    const posterUrl = value('posterUrl').trim()
+    if (!isValidPoster(posterUrl)) throw new Error(`Row ${rowNumber}: posterUrl must be an HTTP(S) URL or a PNG, JPEG, or WebP image (maximum 350000 characters).`)
     if (rating !== '' && Number.isNaN(Number(rating))) {
       throw new Error(`Row ${rowNumber}: personalRating must be a number or blank.`)
     }
@@ -107,6 +118,7 @@ export function parseMoviesCsv(csv) {
       personalRating: rating === '' ? null : Number(rating),
       filePath: value('filePath').trim(),
       notes: value('notes').trim() || null,
+      posterUrl: posterUrl || null,
     }
   })
 }

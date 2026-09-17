@@ -4,10 +4,17 @@ import { MOVIE_CSV_HEADERS, moviesToCsv, parseMoviesCsv } from './movieCsv'
 const movie = {
   title: 'Paris, Texas', releaseYear: 1984, director: 'Wim Wenders', genre: 'Drama',
   runtimeMinutes: 145, language: 'English', watched: true, personalRating: 9.4,
-  filePath: '/movies/paris-texas.mkv', notes: 'Quiet, "beautiful" film.\nWatch again.',
+  filePath: '/movies/paris-texas.mkv', notes: 'Quiet, "beautiful" film.\nWatch again.', posterUrl: 'https://example.com/poster.jpg',
 }
 
 describe('movie CSV utilities', () => {
+  it('round-trips a large library with embedded image data without truncation', () => {
+    const embedded = 'data:image/jpeg;base64,' + 'AAAA'.repeat(10000)
+    const library = Array.from({ length: 500 }, (_, index) => ({ ...movie, title: `Movie ${index}`, posterUrl: embedded }))
+    const csv = moviesToCsv(library)
+    expect(csv.length).toBeGreaterThan(5 * 1024 * 1024)
+    expect(parseMoviesCsv(csv)).toEqual(library)
+  })
   it('exports all supported fields with RFC-style escaping and a UTF-8 marker', () => {
     const csv = moviesToCsv([movie])
 
@@ -17,7 +24,7 @@ describe('movie CSV utilities', () => {
   })
 
   it('round-trips exported movies and preserves blank optional fields', () => {
-    const second = { ...movie, title: 'Arrival', watched: false, personalRating: null, notes: null }
+    const second = { ...movie, title: 'Arrival', watched: false, personalRating: null, notes: null, posterUrl: null }
 
     expect(parseMoviesCsv(moviesToCsv([movie, second]))).toEqual([movie, second])
   })
@@ -26,7 +33,13 @@ describe('movie CSV utilities', () => {
     const csv = '\uFEFFwatched,title,releaseYear,director,genre,runtimeMinutes,language,personalRating,filePath,notes\r\n' +
       'yes,Arrival,2016,Denis Villeneuve,Science Fiction,116,English,,/movies/arrival.mkv,\r\n'
 
-    expect(parseMoviesCsv(csv)[0]).toMatchObject({ title: 'Arrival', watched: true, personalRating: null })
+    expect(parseMoviesCsv(csv)[0]).toMatchObject({ title: 'Arrival', watched: true, personalRating: null, posterUrl: null })
+  })
+
+  it('round-trips uploaded images and rejects unsafe poster sources', () => {
+    const uploaded = { ...movie, posterUrl: 'data:image/png;base64,aGVsbG8=' }
+    expect(parseMoviesCsv(moviesToCsv([uploaded]))).toEqual([uploaded])
+    expect(() => parseMoviesCsv(moviesToCsv([{ ...movie, posterUrl: 'javascript:alert(1)' }]))).toThrow('Row 2: posterUrl')
   })
 
   it('rejects missing columns, empty files, malformed quotes, and too many rows', () => {

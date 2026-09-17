@@ -195,6 +195,18 @@ main { width: min(1400px, calc(100% - 40px)); margin: 0 auto; }
 .movie-table tbody tr:hover .poster-tile, .movie-card:hover .poster-tile { filter: saturate(1.22) brightness(1.08); transform: rotate(-3deg) scale(1.06); }
 .poster-tile::before { content: ''; position: absolute; width: 70px; height: 1px; background: rgb(255 255 255 / 18%); transform: rotate(-44deg); box-shadow: 0 10px rgb(255 255 255 / 8%), 0 -10px rgb(255 255 255 / 8%); }
 .poster-tile span { position: relative; color: rgb(255 255 255 / 92%); font: 800 11px/1 'Manrope'; letter-spacing: .06em; text-shadow: 0 1px 8px #000; }
+.poster-tile img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.poster-tile.has-image::before { display: none; }
+.poster-field { margin: 0; padding: 16px; min-width: 0; border: 1px solid var(--line); }
+.poster-field legend { color: var(--ink); font-size: 12px; }
+.poster-field em { font-style: normal; color: var(--muted); font-size: 10px; }
+.poster-input-layout { display: flex; align-items: flex-start; gap: 16px; }
+.poster-input-layout .poster-tile { width: 72px; height: 108px; }
+.poster-input-controls { flex: 1; min-width: 0; display: grid; gap: 12px; }
+.poster-input-controls p, .poster-input-controls > span { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.poster-input-controls .button { justify-self: start; }
+.poster-field > small { display: block; margin-top: 10px; color: var(--red); }
+.poster-upload input { width: 100%; min-width: 0; font-size: 11px; }
 .title-cell { min-width: 220px; display: grid; gap: 5px; }
 .title-cell strong { color: var(--ink); font-size: 12px; font-weight: 700; }
 .title-cell span { color: var(--faint); font-size: 10px; }

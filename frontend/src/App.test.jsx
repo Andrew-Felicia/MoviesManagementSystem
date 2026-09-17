@@ -461,6 +461,24 @@ describe('App', () => {
     expect(await screen.findByText('Exported 2 movies to CSV')).toBeInTheDocument()
   })
 
+  it('stores legacy URL posters before exporting and reports download failures', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:framebase') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const legacy = [{ ...movies[0], posterUrl: 'https://example.com/poster.png' }]
+    const localized = [{ ...movies[0], posterUrl: 'data:image/png;base64,aGVsbG8=' }]
+    mockAuthenticated(response(legacy), response({ error: 'Poster download failed' }, 400), response(localized))
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
+    expect(await screen.findByText('Poster download failed')).toBeInTheDocument()
+    expect(click).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
+    expect(await screen.findByText('Exported 1 movie to CSV')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/movies/posters/localize', expect.objectContaining({ method: 'POST', headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'csrf-token' }) }))
+    expect(click).toHaveBeenCalledOnce()
+  })
+
   it('shows a retry state when the movie service is unavailable', async () => {
     vi.stubGlobal('fetch', vi.fn((url) => {
       if (url === '/api/auth/me') return Promise.resolve(response(admin))

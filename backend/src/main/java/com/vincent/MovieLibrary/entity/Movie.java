@@ -51,6 +51,9 @@ public class Movie {
 
     private String notes;
 
+    @Column(name = "poster_url", columnDefinition = "TEXT")
+    private String posterUrl;
+
     @Column(
             name = "created_at",
             insertable = false,

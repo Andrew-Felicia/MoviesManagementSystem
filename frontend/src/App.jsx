@@ -355,9 +355,20 @@ export default function App() {
     }
   }
 
-  function exportMovies() {
-    downloadCsv(moviesToCsv(movies), 'framebase-movies.csv')
-    setToast(copy.exported(movies.length))
+  async function exportMovies() {
+    setBatchAction('export')
+    try {
+      // Upgrade legacy URL-only posters before creating a portable backup.
+      const localMovies = movies.some((movie) => movie.posterUrl && !movie.posterUrl.startsWith('data:'))
+        ? await movieApi.localizePosters() : movies
+      setMovies(localMovies)
+      downloadCsv(moviesToCsv(localMovies), 'framebase-movies.csv')
+      setToast(copy.exported(localMovies.length))
+    } catch (requestError) {
+      setToast(requestError.message)
+    } finally {
+      setBatchAction('')
+    }
   }
 
   function downloadTemplate() {
@@ -513,7 +524,7 @@ export default function App() {
             <div><span className="eyebrow">{copy.catalog}</span><h2>{copy.movieLibrary}</h2><p>{copy.shown(filteredMovies.length, movies.length)}</p></div>
             <div className="panel-actions">
               <button className="button button-quiet panel-batch-action" type="button" onClick={() => { setBatchError(''); setBatchOpen(true) }}><Upload size={15} />{copy.importCsv}</button>
-              <button className="button button-quiet panel-batch-action" type="button" onClick={exportMovies}><Download size={15} />{copy.exportCsv}</button>
+              <button className="button button-quiet panel-batch-action" type="button" disabled={Boolean(batchAction)} onClick={exportMovies}><Download size={15} />{batchAction === 'export' ? (language === 'zh' ? '正在保存海报并导出…' : 'Saving posters and exporting…') : copy.exportCsv}</button>
               <button className="button button-quiet panel-batch-action" type="button" onClick={markAllWatched} disabled={Boolean(batchAction) || !movies.some((movie) => !movie.watched)}><CheckCheck size={15} />{batchAction === 'watch' ? copy.watchingAll : copy.watchAll}</button>
               <button className="button button-quiet panel-batch-action" type="button" onClick={markAllUnwatched} disabled={Boolean(batchAction) || !movies.some((movie) => movie.watched)}><Undo2 size={15} />{batchAction === 'unwatch' ? copy.watchingAll : copy.unwatchAll}</button>
               <button className="button button-danger panel-batch-action panel-delete-all" type="button" onClick={() => setDeleteAllOpen(true)} disabled={Boolean(batchAction) || movies.length === 0}><Trash2 size={15} />{copy.deleteAll}</button>

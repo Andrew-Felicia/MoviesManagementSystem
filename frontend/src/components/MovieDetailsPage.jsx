@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowLeft, Check, Clock3, EyeOff, RefreshCw, Star } from 'lucide-react'
 import { movieApi } from '../api/movies'
-import { PosterTile } from './MovieTable'
+import MoviePoster from './MoviePoster'
 
 const COPY = {
   en: {
@@ -66,7 +66,7 @@ export default function MovieDetailsPage({ movieId, language = 'en', onSessionEx
           {error !== 'unavailable' && <button className="button button-primary" type="button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={15} />{copy.retry}</button>}
         </div> : movie && <article className="movie-details-content">
           <header className="movie-details-hero">
-            <div className="movie-details-poster"><PosterTile movie={movie} /></div>
+            <div className="movie-details-poster"><MoviePoster movie={movie} eager /></div>
             <div className="movie-details-heading">
               <span className="eyebrow">{copy.details}</span>
               <h1 ref={heading} tabIndex={-1}>{movie.title}</h1>

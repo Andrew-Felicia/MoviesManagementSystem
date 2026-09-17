@@ -1,14 +1,9 @@
 import { Check, Clock3, Edit3, Eye, EyeOff, Film, Star, Trash2 } from 'lucide-react'
+import MoviePoster from './MoviePoster'
 
 const COPY = {
   en: { noTitles: 'No matching titles', emptyHelp: 'Try clearing a filter or add a new movie to your library.', cover: 'Cover', title: 'Title', genre: 'Genre', runtime: 'Runtime', status: 'Status', rating: 'Rating', actions: 'Actions', minutes: 'min', watched: 'Watched', unwatched: 'Unwatched', markWatched: 'Mark watched', markAs: (title, watched) => `Mark ${title} as ${watched ? 'watched' : 'unwatched'}`, edit: (title) => `Edit ${title}`, delete: (title) => `Delete ${title}`, editShort: 'Edit' },
   zh: { noTitles: '没有匹配的电影', emptyHelp: '尝试清除筛选条件，或向片库添加一部新电影。', cover: '封面', title: '片名', genre: '类型', runtime: '时长', status: '状态', rating: '评分', actions: '操作', minutes: '分钟', watched: '已观看', unwatched: '未观看', markWatched: '标记为看过', markAs: (title, watched) => `将《${title}》标记为${watched ? '已观看' : '未观看'}`, edit: (title) => `编辑《${title}》`, delete: (title) => `删除《${title}》`, editShort: '编辑' }
-}
-
-export function PosterTile({ movie }) {
-  const initials = movie.title.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase()
-  const hue = (movie.title.split('').reduce((total, char) => total + char.charCodeAt(0), 0) * 7) % 360
-  return <div className="poster-tile" style={{ '--poster-hue': hue }} aria-hidden="true"><span>{initials}</span></div>
 }
 
 export default function MovieTable({ language = 'en', movies, onEdit, onDelete, onToggleWatched }) {
@@ -46,7 +41,7 @@ export default function MovieTable({ language = 'en', movies, onEdit, onDelete, 
         <tbody>
           {movies.map((movie) => (
             <tr key={movie.id} className="movie-entry" onClick={(event) => openRow(event, movie)}>
-              <td><a href={`#movies/${movie.id}`} aria-label={detailsLabel(movie.title)}><PosterTile movie={movie} /></a></td>
+              <td><a href={`#movies/${movie.id}`} aria-label={detailsLabel(movie.title)}><MoviePoster movie={movie} /></a></td>
               <td>
                 <a className="title-cell movie-details-link" href={`#movies/${movie.id}`}><strong>{movie.title}</strong><span>{movie.releaseYear} · {movie.director}</span></a>
               </td>
@@ -72,7 +67,7 @@ export default function MovieTable({ language = 'en', movies, onEdit, onDelete, 
       <div className="movie-cards">
         {movies.map((movie) => (
           <article className="movie-card movie-entry" key={movie.id} onClick={(event) => openRow(event, movie)}>
-            <a href={`#movies/${movie.id}`} aria-label={detailsLabel(movie.title)}><PosterTile movie={movie} /></a>
+            <a href={`#movies/${movie.id}`} aria-label={detailsLabel(movie.title)}><MoviePoster movie={movie} /></a>
             <div className="movie-card-main">
               <div className="movie-card-title"><div><h3><a className="movie-details-link" href={`#movies/${movie.id}`}>{movie.title}</a></h3><p>{movie.releaseYear} · {movie.director}</p></div></div>
               <div className="movie-card-meta"><span>{movie.genre}</span><span>{movie.runtimeMinutes} {copy.minutes}</span>{movie.personalRating != null && <span className="rating"><Star size={13} fill="currentColor" />{movie.personalRating.toFixed(1)}</span>}</div>

@@ -106,3 +106,19 @@ from the same Spring Boot application:
 ```bash
   docker build -f backend/Dockerfile -t movie-library .
 ```
+
+bt panel
+```angular2html
+========================面板账户登录信息==========================
+
+ 【云服务器】请在安全组放行 18268 端口
+ 外网ipv4面板地址: https://20.6.128.138:18268/6da28c2c
+ 内网面板地址:     https://172.16.0.4:18268/6da28c2c
+ username: xp11pyby
+ password: 1ba7eb93
+
+ 浏览器访问以下链接，添加宝塔客服
+ https://www.bt.cn/new/wechat_customer
+==================================================================
+Time consumed: 2 Minute!
+```

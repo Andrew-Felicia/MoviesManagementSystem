@@ -48,6 +48,11 @@ public record MovieRequest(
         String filePath,
 
         @Size(max = 2000, message = "Notes must not exceed 2000 characters")
-        String notes
+        String notes,
+
+        @Size(max = 350000, message = "Poster must not exceed 350000 characters")
+        @Pattern(regexp = "(?i)^(?:https?://[^\\s]+|data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2})?$",
+                message = "Use an HTTP(S) poster URL or a PNG, JPEG, or WebP image")
+        String posterUrl
 ) {
 }

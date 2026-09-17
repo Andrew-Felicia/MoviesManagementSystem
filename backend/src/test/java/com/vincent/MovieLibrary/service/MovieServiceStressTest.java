@@ -37,7 +37,7 @@ class MovieServiceStressTest {
 
     @BeforeEach
     void setUp() {
-        movieService = new MovieService(movieRepository, userAccountRepository);
+        movieService = new MovieService(movieRepository, userAccountRepository, new PosterStorageService());
         movie = movie();
         request = request();
     }
@@ -118,7 +118,7 @@ class MovieServiceStressTest {
     private static MovieRequest request() {
         return new MovieRequest(
                 "Stress Movie", 2026, "Director", "Drama", 100,
-                "English", false, null, "/movies/stress.mkv", null
+                "English", false, null, "/movies/stress.mkv", null, null
         );
     }
 }

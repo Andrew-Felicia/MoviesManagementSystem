@@ -15,6 +15,7 @@ public record MovieResponse(
         Double personalRating,
         String filePath,
         String notes,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String posterUrl
 ) {
 }

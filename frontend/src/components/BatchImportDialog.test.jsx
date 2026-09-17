@@ -10,13 +10,14 @@ describe('BatchImportDialog', () => {
   it('parses a selected CSV and submits all movies', async () => {
     const onImport = vi.fn()
     render(<BatchImportDialog busy={false} error="" onClose={vi.fn()} onImport={onImport} onDownloadTemplate={vi.fn()} />)
-    const file = new File([moviesToCsv([movie])], 'library.csv', { type: 'text/csv' })
+    const withPoster = { ...movie, posterUrl: 'https://example.com/arrival.jpg' }
+    const file = new File([moviesToCsv([withPoster])], 'library.csv', { type: 'text/csv' })
 
     await userEvent.upload(screen.getByLabelText('Choose CSV file'), file)
     expect(await screen.findByText('1 movie ready to import')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Import 1 movie' }))
 
-    expect(onImport).toHaveBeenCalledWith([movie])
+    expect(onImport).toHaveBeenCalledWith([withPoster])
   })
 
   it('shows malformed file and backend errors without importing', async () => {

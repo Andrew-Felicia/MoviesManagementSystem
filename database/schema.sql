@@ -21,6 +21,8 @@ CREATE TABLE movies (
 
     notes TEXT,
 
+    poster_url TEXT,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

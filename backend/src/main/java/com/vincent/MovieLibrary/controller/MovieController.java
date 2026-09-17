@@ -54,6 +54,11 @@ public class MovieController {
         return movieService.createMovies(authentication.getName(), request);
     }
 
+    @PostMapping("/posters/localize")
+    public List<MovieResponse> localizePosters(Authentication authentication) {
+        return movieService.localizePosters(authentication.getName());
+    }
+
     @PutMapping("/batch/watched")
     public MovieBatchOperationResponse markAllMoviesWatched(Authentication authentication) {
         return movieService.markAllMoviesWatched(authentication.getName());

@@ -45,7 +45,7 @@ class MovieServiceTest {
 
     @BeforeEach
     void setUp() {
-        movieService = new MovieService(movieRepository, userAccountRepository);
+        movieService = new MovieService(movieRepository, userAccountRepository, new PosterStorageService());
     }
 
     @Test
@@ -133,7 +133,7 @@ class MovieServiceTest {
                 existingDuplicate.director(), existingDuplicate.genre(),
                 existingDuplicate.runtimeMinutes(), existingDuplicate.language(),
                 existingDuplicate.watched(), existingDuplicate.personalRating(),
-                " /MOVIES/BLADE-RUNNER.MKV ", existingDuplicate.notes());
+                " /MOVIES/BLADE-RUNNER.MKV ", existingDuplicate.notes(), null);
         MovieRequest unique = request("Arrival", 2016, false, 8.8, "First contact");
         MovieRequest repeatedUnique = request("ARRIVAL", 2016, false, 8.8, null);
 
@@ -300,7 +300,7 @@ class MovieServiceTest {
                 watched,
                 rating,
                 "/movies/" + title + ".mkv",
-                notes
+                notes, null
         );
     }
 
@@ -317,7 +317,7 @@ class MovieServiceTest {
                 movie.getPersonalRating(),
                 movie.getFilePath(),
                 movie.getNotes(),
-                movie.getCreatedAt()
+                movie.getCreatedAt(), null
         );
     }
 

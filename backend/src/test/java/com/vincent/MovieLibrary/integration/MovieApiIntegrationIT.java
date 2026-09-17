@@ -4,6 +4,8 @@ import com.vincent.MovieLibrary.entity.Movie;
 import com.vincent.MovieLibrary.entity.UserAccount;
 import com.vincent.MovieLibrary.repository.MovieRepository;
 import com.vincent.MovieLibrary.repository.UserAccountRepository;
+import com.vincent.MovieLibrary.service.PosterStorageService;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,9 +74,78 @@ class MovieApiIntegrationIT {
     @Autowired
     private UserAccountRepository userAccountRepository;
 
+    @MockitoSpyBean
+    private PosterStorageService posterStorageService;
+
     @BeforeEach
     void clearDatabase() {
         movieRepository.deleteAll();
+    }
+
+    @Test
+    void postersPersistForManualAndBatchImportsAndRemainPrivate() throws Exception {
+        String image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aRZkAAAAASUVORK5CYII=";
+        org.mockito.Mockito.doReturn(image).when(posterStorageService).store("https://example.com/poster.jpg");
+        String withUpload = CREATE_JSON.replace("\"notes\":", "\"posterUrl\": \"" + image + "\", \"notes\":");
+        mockMvc.perform(post("/api/movies").principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(withUpload))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.posterUrl").value(image));
+        Movie created = movieRepository.findAll().getFirst();
+        org.assertj.core.api.Assertions.assertThat(created.getPosterUrl()).isEqualTo(image);
+        mockMvc.perform(get("/api/movies/{id}", created.getId()).principal(ADMIN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.posterUrl").value(image));
+        mockMvc.perform(get("/api/movies/{id}", created.getId()).principal(ALICE))
+                .andExpect(status().isNotFound());
+
+        String withUrl = UPDATE_JSON.replace("\"notes\":", "\"posterUrl\": \"https://example.com/poster.jpg\", \"notes\":");
+        mockMvc.perform(post("/api/movies/batch").principal(ADMIN).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"movies\":[" + withUrl + "]}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.movies[0].posterUrl").value(image));
+        mockMvc.perform(get("/api/movies").principal(ADMIN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
+
+        mockMvc.perform(put("/api/movies/{id}", created.getId()).principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(withUrl))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.posterUrl").value(image));
+        mockMvc.perform(put("/api/movies/{id}", created.getId()).principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(UPDATE_JSON))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.posterUrl").doesNotExist());
+        org.assertj.core.api.Assertions.assertThat(movieRepository.findById(created.getId()).orElseThrow().getPosterUrl()).isNull();
+    }
+
+    @Test
+    void legacyPosterConversionIsOwnerScopedAndStoredInDatabase() throws Exception {
+        ensureUser("alice");
+        String image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aRZkAAAAASUVORK5CYII=";
+        org.mockito.Mockito.doReturn(image).when(posterStorageService).store("https://example.com/legacy.png");
+        mockMvc.perform(post("/api/movies").principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(CREATE_JSON)).andExpect(status().isCreated());
+        mockMvc.perform(post("/api/movies").principal(ALICE).contentType(MediaType.APPLICATION_JSON).content(CREATE_JSON)).andExpect(status().isCreated());
+        for (Movie movie : movieRepository.findAll()) {
+            movie.setPosterUrl("https://example.com/legacy.png");
+            movieRepository.save(movie);
+        }
+        mockMvc.perform(post("/api/movies/posters/localize").principal(ADMIN))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].posterUrl").value(image));
+        assertStoredPoster("admin", image);
+        assertStoredPoster("alice", "https://example.com/legacy.png");
+        mockMvc.perform(post("/api/movies/posters/localize").principal(ADMIN)).andExpect(status().isOk());
+        org.mockito.Mockito.verify(posterStorageService, org.mockito.Mockito.times(1)).store("https://example.com/legacy.png");
+    }
+
+    @Test
+    void failedPosterImportRollsBackEntireBatchAndInvalidUpdatePreservesMovie() throws Exception {
+        String invalid = CREATE_JSON.replace("\"notes\":", "\"posterUrl\": \"http://127.0.0.1/private\", \"notes\":").replace("Interstellar", "Bad poster");
+        mockMvc.perform(post("/api/movies/batch").principal(ADMIN).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"movies\":[" + CREATE_JSON + "," + invalid + "]}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.posterUrl").exists());
+        org.assertj.core.api.Assertions.assertThat(movieRepository.count()).isZero();
+        mockMvc.perform(post("/api/movies").principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(CREATE_JSON)).andExpect(status().isCreated());
+        Movie movie = movieRepository.findAll().getFirst();
+        mockMvc.perform(put("/api/movies/{id}", movie.getId()).principal(ADMIN).contentType(MediaType.APPLICATION_JSON).content(invalid))
+                .andExpect(status().isBadRequest());
+        org.assertj.core.api.Assertions.assertThat(movieRepository.findById(movie.getId()).orElseThrow().getTitle()).isEqualTo("Interstellar");
+        mockMvc.perform(post("/api/movies/posters/localize").principal(ADMIN)).andExpect(status().isOk());
+    }
+
+    private void assertStoredPoster(String username, String expected) {
+        org.assertj.core.api.Assertions.assertThat(movieRepository.findAllByOwner_UsernameIgnoreCase(username).getFirst().getPosterUrl()).isEqualTo(expected);
     }
 
     @Test

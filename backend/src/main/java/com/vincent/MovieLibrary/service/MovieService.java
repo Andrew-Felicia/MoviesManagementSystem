@@ -24,10 +24,12 @@ public class MovieService {
 
     private final MovieRepository movieRepository;
     private final UserAccountRepository userAccountRepository;
+    private final PosterStorageService posterStorageService;
 
-    public MovieService(MovieRepository movieRepository, UserAccountRepository userAccountRepository) {
+    public MovieService(MovieRepository movieRepository, UserAccountRepository userAccountRepository, PosterStorageService posterStorageService) {
         this.movieRepository = movieRepository;
         this.userAccountRepository = userAccountRepository;
+        this.posterStorageService = posterStorageService;
     }
 
     public List<MovieResponse> getAllMovies(String username) {
@@ -39,6 +41,17 @@ public class MovieService {
 
     public MovieResponse getMovieById(String username, Integer id) {
         return toResponse(findMovieById(username, id));
+    }
+
+    @Transactional
+    public List<MovieResponse> localizePosters(String username) {
+        List<Movie> movies = movieRepository.findAllByOwner_UsernameIgnoreCase(username);
+        for (Movie movie : movies) {
+            if (movie.getPosterUrl() != null && !movie.getPosterUrl().startsWith("data:")) {
+                movie.setPosterUrl(posterStorageService.store(movie.getPosterUrl()));
+            }
+        }
+        return movieRepository.saveAll(movies).stream().map(this::toResponse).toList();
     }
 
     public MovieResponse createMovie(String username, MovieRequest request) {
@@ -149,6 +162,7 @@ public class MovieService {
             MovieRequest request,
             Movie movie
     ) {
+        String poster = posterStorageService.store(request.posterUrl());
         movie.setTitle(request.title());
         movie.setReleaseYear(request.releaseYear());
         movie.setDirector(request.director());
@@ -159,6 +173,7 @@ public class MovieService {
         movie.setPersonalRating(request.personalRating());
         movie.setFilePath(request.filePath());
         movie.setNotes(request.notes());
+        movie.setPosterUrl(poster);
     }
 
     //This method converts an entity into response data:
@@ -175,7 +190,8 @@ public class MovieService {
                 movie.getPersonalRating(),
                 movie.getFilePath(),
                 movie.getNotes(),
-                movie.getCreatedAt()
+                movie.getCreatedAt(),
+                movie.getPosterUrl()
         );
     }
 

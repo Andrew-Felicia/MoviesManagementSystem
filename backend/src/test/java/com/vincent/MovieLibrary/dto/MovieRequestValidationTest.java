@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Set;
 import java.util.stream.Stream;
@@ -35,6 +36,25 @@ class MovieRequestValidationTest {
     @Test
     void validRequestHasNoViolations() {
         assertThat(validator.validate(new RequestBuilder().build())).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"https://example.com/poster.jpg", "http://example.com/poster.png", "data:image/png;base64,aGVsbG8=", "data:image/jpeg;base64,aGVsbG8=", "data:image/webp;base64,aGVsbG8=", ""})
+    void optionalPosterAcceptsImagesAndWebUrls(String poster) {
+        assertThat(validator.validate(new RequestBuilder().posterUrl(poster).build())).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"javascript:alert(1)", "file:///tmp/poster.png", "data:image/svg+xml;base64,AAAA", "https://example.com/bad url", "data:image/png;base64,%%%"})
+    void unsafePosterSourcesAreRejected(String poster) {
+        assertThat(validator.validate(new RequestBuilder().posterUrl(poster).build()))
+                .anyMatch(violation -> violation.getPropertyPath().toString().equals("posterUrl"));
+    }
+
+    @Test
+    void oversizedPosterIsRejected() {
+        assertThat(validator.validate(new RequestBuilder().posterUrl("data:image/png;base64," + "A".repeat(350000)).build()))
+                .anyMatch(violation -> violation.getMessage().equals("Poster must not exceed 350000 characters"));
     }
 
     @Test
@@ -148,6 +168,12 @@ class MovieRequestValidationTest {
         private Double personalRating = 9.8;
         private String filePath = "/movies/interstellar.mkv";
         private String notes = "Amazing soundtrack.";
+        private String posterUrl;
+
+        RequestBuilder posterUrl(String value) {
+            posterUrl = value;
+            return this;
+        }
 
         RequestBuilder title(String value) {
             title = value;
@@ -210,7 +236,7 @@ class MovieRequestValidationTest {
                     watched,
                     personalRating,
                     filePath,
-                    notes
+                    notes, posterUrl
             );
         }
     }

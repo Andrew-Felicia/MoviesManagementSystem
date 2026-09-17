@@ -36,6 +36,7 @@ async function request(path = '', options = {}) {
 export const movieApi = {
   list: () => request(),
   get: (id) => request(`/${encodeURIComponent(id)}`),
+  localizePosters: () => request('/posters/localize', { method: 'POST' }),
   create: (movie) => request('', { method: 'POST', body: JSON.stringify(movie) }),
   createBatch: (movies) => request('/batch', { method: 'POST', body: JSON.stringify({ movies }) }),
   markAllWatched: () => request('/batch/watched', { method: 'PUT' }),

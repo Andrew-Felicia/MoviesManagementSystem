@@ -1,0 +1,7 @@
+node_modules
+posters/
+source/
+*.log
+selected.json
+poster_checks.json
+csv-preview.png
