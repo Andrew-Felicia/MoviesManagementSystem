@@ -8,6 +8,7 @@ import { BrandMark } from './components/Icons'
 import LoginPage from './components/LoginPage'
 import MovieForm from './components/MovieForm'
 import MovieTable from './components/MovieTable'
+import MovieDetailsPage from './components/MovieDetailsPage'
 import PasswordChangeDialog from './components/PasswordChangeDialog'
 import { moviesToCsv } from './utils/movieCsv'
 
@@ -34,6 +35,10 @@ const APP_COPY = {
 
 const CINEMA_TICKER = ['CURATE', 'DISCOVER', 'WATCH', 'RATE', 'REPEAT']
 const MOVIES_PER_PAGE = 12
+
+function movieIdFromLocation() {
+  return window.location.hash.match(/^#movies\/(\d+)$/)?.[1] || null
+}
 
 function visiblePageNumbers(currentPage, pageCount) {
   return [...new Set([1, currentPage - 1, currentPage, currentPage + 1, pageCount])]
@@ -98,6 +103,7 @@ function downloadCsv(csv, fileName) {
 }
 
 export default function App() {
+  const [detailMovieId, setDetailMovieId] = useState(movieIdFromLocation)
   const [language, setLanguage] = useState('en')
   const [currentUser, setCurrentUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -135,6 +141,14 @@ export default function App() {
   const [adminResetError, setAdminResetError] = useState('')
   const [adminResetting, setAdminResetting] = useState(false)
   const copy = APP_COPY[language]
+
+  useEffect(() => {
+    const syncLocation = () => setDetailMovieId(movieIdFromLocation())
+    window.addEventListener('hashchange', syncLocation)
+    return () => window.removeEventListener('hashchange', syncLocation)
+  }, [])
+
+  const handleSessionExpired = useCallback(() => setCurrentUser(null), [])
 
   const loadMovies = useCallback(async () => {
     setLoading(true)
@@ -279,6 +293,7 @@ export default function App() {
       setRegisteredUsers(null)
       setAdminUsersOpen(false)
       setAdminUsers([])
+      window.location.hash = 'catalog'
     } catch (requestError) {
       setToast(requestError.message)
     }
@@ -469,6 +484,7 @@ export default function App() {
       </header>
 
       <main>
+        {detailMovieId ? <MovieDetailsPage key={`${currentUser.username}:${detailMovieId}`} movieId={detailMovieId} language={language} onSessionExpired={handleSessionExpired} /> : <>
         <section className="hero-strip" id="catalog" onPointerMove={moveHeroSpotlight} onPointerLeave={resetHeroSpotlight}>
           <div className="hero-copy">
             <span className="eyebrow">{copy.heroEyebrow}</span>
@@ -530,6 +546,7 @@ export default function App() {
             </nav>}
           </>}
         </section>
+        </>}
       </main>
 
       <footer className="site-footer"><BrandMark /><span>FRAMEBASE</span><p>{copy.footer}</p><small>{copy.footerNote}</small></footer>

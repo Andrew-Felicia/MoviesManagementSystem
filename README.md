@@ -1,5 +1,10 @@
 ![banner](ascii-art-text.png)
 
+## Project handoff
+
+For a concise project overview and instructions for another developer or coding
+assistant, read [docs/AI_HANDOFF.md](docs/AI_HANDOFF.md).
+
 
 # Test
 ```bash

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -24,17 +24,88 @@ function mockAuthenticated(...movieResponses) {
   }))
 }
 
+function mockMovieDetails() {
+  vi.stubGlobal('fetch', vi.fn((url) => {
+    if (url === '/api/auth/me') return Promise.resolve(response(admin))
+    if (url === '/api/admin/stats') return Promise.resolve(response({ userCount: 7 }))
+    if (url === '/api/movies') return Promise.resolve(response(movies))
+    const movie = movies.find((item) => url === `/api/movies/${item.id}`)
+    if (movie) return Promise.resolve(response({ ...movie, notes: 'Watch with the commentary.' }))
+    throw new Error(`Unexpected URL: ${url}`)
+  }))
+}
+
 async function openLoginDialog() {
   await userEvent.click(await screen.findByRole('button', { name: 'Login' }))
   return screen.findByRole('dialog', { name: 'Welcome back' })
 }
 
 afterEach(() => {
+  window.history.replaceState(null, '', '/')
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
 describe('App', () => {
+  it('opens movie details and preserves the search when returning to the library', async () => {
+    mockMovieDetails()
+    render(<App />)
+    await screen.findAllByText('Arrival')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Search library' }), 'Arrival')
+    await userEvent.click(screen.getAllByRole('link', { name: /Arrival/ })[1])
+    await screen.findByRole('heading', { name: 'Arrival' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Arrival' })).toHaveFocus())
+    expect(screen.getByText('Watch with the commentary.')).toBeInTheDocument()
+    expect(screen.getByText('/movies/arrival.mkv')).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith('/api/movies/1', expect.objectContaining({ credentials: 'same-origin' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Back to library' }))
+    expect(await screen.findByRole('textbox', { name: 'Search library' })).toHaveValue('Arrival')
+    expect(screen.getByText('1 of 2 titles matched')).toBeInTheDocument()
+  })
+
+  it('opens a movie from the row and follows URL changes', async () => {
+    mockMovieDetails()
+    render(<App />)
+    const row = (await screen.findAllByText('Heat'))[0].closest('tr')
+    await userEvent.click(within(row).getByText('Crime'))
+    expect(await screen.findByRole('heading', { name: 'Heat' })).toBeInTheDocument()
+    window.history.replaceState(null, '', '/#catalog')
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('textbox', { name: 'Search library' })).toBeInTheDocument()
+    window.history.replaceState(null, '', '/#movies/2')
+    fireEvent(window, new HashChangeEvent('hashchange'))
+    expect(await screen.findByRole('heading', { name: 'Heat' })).toBeInTheDocument()
+  })
+
+  it('opens mobile movie links with the keyboard', async () => {
+    mockMovieDetails()
+    render(<App />)
+    await screen.findAllByText('Heat')
+    const link = screen.getAllByRole('link', { name: 'Heat' })[0]
+    link.focus()
+    await userEvent.keyboard('{Enter}')
+    expect(await screen.findByRole('heading', { name: 'Heat' })).toBeInTheDocument()
+  })
+
+  it('keeps movie details behind login when opening a saved URL', async () => {
+    window.history.replaceState(null, '', '/#movies/1')
+    let authenticated = false
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (url === '/api/auth/csrf') return Promise.resolve(response({ token: 'csrf-token' }))
+      if (url === '/api/auth/login') { authenticated = true; return Promise.resolve(response(admin)) }
+      if (url === '/api/auth/me') return Promise.resolve(authenticated ? response(admin) : response({}, 401))
+      if (url === '/api/admin/stats') return Promise.resolve(response({ userCount: 1 }))
+      if (url === '/api/movies/1') return Promise.resolve(response(movies[0]))
+      return Promise.resolve(response(movies))
+    }))
+    render(<App />)
+    await openLoginDialog()
+    expect(fetch).not.toHaveBeenCalledWith('/api/movies/1', expect.anything())
+    await userEvent.type(screen.getByLabelText('Password'), 'admin')
+    await userEvent.click(screen.getByRole('button', { name: 'Enter library' }))
+    expect(await screen.findByRole('heading', { name: 'Arrival' })).toBeInTheDocument()
+  })
+
   it('shows a session check while authentication is loading', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     render(<App />)

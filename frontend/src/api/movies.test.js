@@ -15,6 +15,14 @@ function mockRequest(apiResponse) {
 afterEach(() => vi.restoreAllMocks())
 
 describe('movieApi', () => {
+  it('loads a single movie using the session cookie', async () => {
+    const movie = { id: 1, title: 'Arrival' }
+    mockRequest(response(movie))
+    await expect(movieApi.get(1)).resolves.toEqual(movie)
+    expect(fetch).toHaveBeenCalledWith('/api/movies/1', expect.objectContaining({ credentials: 'same-origin' }))
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('loads movies', async () => {
     const movies = [{ id: 1, title: 'Arrival' }]
     mockRequest(response(movies))

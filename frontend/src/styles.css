@@ -210,6 +210,44 @@ main { width: min(1400px, calc(100% - 40px)); margin: 0 auto; }
 .danger-action:hover { color: var(--red) !important; }
 .movie-cards { display: none; }
 
+.movie-entry { cursor: pointer; }
+.movie-details-link:hover, .movie-details-link:hover strong { color: var(--blue-bright); }
+.movie-entry a:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 4px; }
+.movie-details-page { max-width: 1060px; margin: 32px auto 60px; }
+.details-back { margin-bottom: 22px; }
+.movie-details-content, .details-message { border: 1px solid var(--line); background: var(--navy-900); }
+.details-message { padding: 60px 24px; text-align: center; }
+.details-message h1 { font-size: 24px; }
+.details-message p { color: var(--muted); margin-bottom: 24px; }
+.movie-details-hero { display: flex; align-items: center; gap: 32px; padding: 36px; border-bottom: 1px solid var(--line); background: radial-gradient(ellipse at top right, #173559, transparent 75%); }
+.movie-details-poster .poster-tile { width: 128px; height: 180px; }
+.movie-details-poster .poster-tile span { font-size: 32px; }
+.movie-details-heading { min-width: 0; }
+.movie-details-heading h1 { margin: 12px 0; color: var(--ink); font: 800 clamp(26px, 4vw, 44px)/1.15 'Manrope', sans-serif; overflow-wrap: anywhere; }
+.movie-details-heading p { color: var(--muted); line-height: 1.6; }
+.movie-details-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 12px; }
+.movie-details-badges .genre-tag { white-space: normal; }
+.movie-details-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; margin: 0; padding: 32px 36px; border-bottom: 1px solid var(--line); }
+.movie-details-facts dt { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+.movie-details-facts dd { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.movie-details-facts .status-pill { cursor: default; }
+.movie-details-notes, .movie-details-file { padding: 26px 36px; }
+.movie-details-notes h2, .movie-details-file h2 { margin: 0 0 14px; font: 700 15px 'Manrope', sans-serif; }
+.movie-details-notes p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #b7c6d7; line-height: 1.8; font-size: 14px; }
+.movie-details-file { border-top: 1px solid var(--line); }
+.movie-details-file code { display: block; padding: 14px; background: var(--navy-950); border: 1px solid var(--line-soft); color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; font-size: 12px; line-height: 1.7; }
+
+@media (max-width: 640px) {
+  .movie-details-page { margin-top: 20px; }
+  .movie-details-hero { align-items: flex-start; gap: 16px; padding: 22px 18px; }
+  .movie-details-poster .poster-tile { width: 68px; height: 100px; }
+  .movie-details-poster .poster-tile span { font-size: 20px; }
+  .movie-details-heading h1 { font-size: 25px; }
+  .movie-details-heading p { font-size: 12px; }
+  .movie-details-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 24px 18px; gap: 24px 16px; }
+  .movie-details-notes, .movie-details-file { padding: 24px 18px; }
+}
+
 .catalog-pagination { min-height: 72px; padding: 14px 18px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; border-top: 1px solid var(--line); background: #091624; color: #627990; }
 .pagination-range, .pagination-status { font-size: 10px; letter-spacing: .025em; }
 .pagination-status { justify-self: end; }
