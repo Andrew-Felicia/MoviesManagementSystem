@@ -9,10 +9,16 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Pull-request runs may be superseded. Main-branch runs include production
+  # deployment, so queue them to ensure a deployment is never interrupted.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+
+env:
+  IMAGE_NAME: ghcr.io/andrew-felicia/moviesmanagementsystem
+  PRODUCTION_URL: https://taoyongli.me
 
 jobs:
   test:
@@ -70,6 +76,10 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Test deployment safety script
+        working-directory: .
+        run: ./deploy/deploy-app.test.sh
+
       - name: Run unit, stress, integration, and coverage verification
         run: ./mvnw --batch-mode --no-transfer-progress verify
         env:
@@ -97,6 +107,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -119,12 +131,12 @@ jobs:
         id: metadata
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=sha-
-            type=raw,value=latest
+            type=raw,value=sha-${{ github.sha }}
 
       - name: Build and publish image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -149,6 +161,9 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
       - name: Configure secure SSH access
         env:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
@@ -161,18 +176,60 @@ jobs:
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Pull and restart the application
+      - name: Deploy and verify the application
         env:
+          COMPOSE_IMAGE: ${{ env.IMAGE_NAME }}:latest
+          DEPLOY_IMAGE: ${{ env.IMAGE_NAME }}@${{ needs.publish-image.outputs.image_digest }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/id_ed25519 \
             -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o IdentitiesOnly=yes \
+            -o ServerAliveCountMax=4 \
+            -o ServerAliveInterval=15 \
             -o StrictHostKeyChecking=yes \
-            "$VPS_USER@$VPS_HOST" <<'REMOTE'
-              set -euo pipefail
-              cd ~/movie-library
-              docker compose pull app
-              docker compose up -d --no-deps --force-recreate app
-              docker compose ps app
-          REMOTE
+            "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$DEPLOY_IMAGE" "$COMPOSE_IMAGE" movie-library \
+            < deploy/deploy-app.sh
+
+      - name: Verify production through Nginx
+        run: |
+          curl --fail --silent --show-error \
+            --retry 10 \
+            --retry-all-errors \
+            --retry-delay 3 \
+            --connect-timeout 5 \
+            --max-time 15 \
+            "$PRODUCTION_URL/api/auth/csrf" \
+            > /dev/null
+
+  promote-image:
+    name: Promote deployed image to latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [publish-image, deploy-production]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote the verified image
+        env:
+          DEPLOY_IMAGE: ${{ env.IMAGE_NAME }}@${{ needs.publish-image.outputs.image_digest }}
+        run: |
+          docker buildx imagetools create \
+            --tag "$IMAGE_NAME:latest" \
+            "$DEPLOY_IMAGE"

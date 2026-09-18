@@ -20,8 +20,8 @@ Browser
             └─ Spring Boot 4 / Java 21 application (backend/)
                  └─ PostgreSQL 17
 
-Production:
-Internet → Caddy (HTTPS) → app container (port 8080) → PostgreSQL container
+Production target (verify the VPS migration before assuming this is live):
+Internet → BT Nginx (HTTPS) → localhost:8080 → app container → PostgreSQL container
 ```
 
 - `frontend/`: React UI, Vite, Vitest, Testing Library, Lucide icons.
@@ -30,8 +30,10 @@ Internet → Caddy (HTTPS) → app container (port 8080) → PostgreSQL containe
   and packages it into the Spring Boot application, so one app container serves
   both the UI and API.
 - `.github/workflows/ci-cd.yml`: CI, image publishing, and production deploy.
-- The production Docker Compose and Caddy files are on the Azure VM in
-  `~/movie-library`; they are not currently committed in this repository.
+- The production Docker Compose file is on the Azure VM in `~/movie-library`;
+  it is not currently committed in this repository. BT manages Nginx site
+  configuration. See `docs/NGINX_DEPLOYMENT.md` for the required port mapping
+  and reverse-proxy settings. Do not introduce a second public reverse proxy.
 
 ## Important product behavior
 
@@ -142,8 +144,9 @@ push to main
   → frontend tests and coverage
   → frontend build
   → backend unit, stress, integration, and coverage verification
-  → publish Docker image to GHCR
-  → SSH to Azure VM, pull image, recreate only the app container
+  → publish commit-tagged Docker image to GHCR
+  → SSH to Azure VM, deploy that exact image, verify app and Nginx
+  → promote the verified image to `latest`
 ```
 
 Published image:
@@ -152,8 +155,19 @@ Published image:
 ghcr.io/andrew-felicia/moviesmanagementsystem:latest
 ```
 
-Each published commit also receives an immutable `sha-...` tag. The deploy job
-currently pulls `latest`; rollback by source is therefore the safe normal path:
+Each published commit receives a full-commit `sha-...` tag. The deploy job uses
+the immutable digest produced by that same workflow run. Production runs are
+queued so one deployment cannot interrupt another. The registry's `latest` tag
+is promoted only after the digest passes the VPS and public Nginx checks, so it
+always identifies the last release that completed the pipeline.
+
+The remote deployment validates the Compose configuration, requires the app to
+publish `127.0.0.1:8080`, and waits for `/api/auth/csrf`. If the new app does not
+become ready, it restores the image that was running before the attempt and
+prints recent app logs. Afterward, CI verifies the public HTTPS route through
+Nginx.
+
+For a source-level rollback:
 
 ```bash
 git revert <bad-commit-sha>
@@ -167,10 +181,15 @@ to a shared branch.
 ### Production setup facts
 
 - Azure VM runs Ubuntu and Docker Compose under user `pandas`.
-- Caddy owns public ports 80 and 443; the app is internal on port 8080 and
-  PostgreSQL is internal on port 5432.
+- The chosen ingress is BT Nginx on public ports 80 and 443. The movie app
+  must publish `127.0.0.1:8080:8080` for host Nginx to reach it. PostgreSQL
+  remains internal on port 5432. The VPS configuration must be checked before
+  treating the migration as complete; local documentation does not deploy it.
 - The deploy job uses GitHub environment `production` and these secrets:
   `VPS_HOST`, `VPS_USER`, `VPS_SSH_PRIVATE_KEY`, and `VPS_KNOWN_HOSTS`.
+- The VPS `app` service image must be
+  `ghcr.io/andrew-felicia/moviesmanagementsystem:latest`; the deployment script
+  verifies this before changing the running container.
 - The VM's compose environment also has PostgreSQL/admin/session values.
   They must stay only on the VM in its `.env` file.
 - Normal manual recovery/redeploy on the VM is:
@@ -178,12 +197,13 @@ to a shared branch.
 ```bash
 cd ~/movie-library
 docker compose pull app
-docker compose up -d --no-deps --force-recreate app
+docker compose up -d --no-deps --force-recreate --pull never app
 docker compose ps
 ```
 
 Never run `docker compose down -v` against the production deployment unless the
-user has explicitly accepted deletion of the PostgreSQL volume and Caddy state.
+user has explicitly accepted deletion of the PostgreSQL volume and other
+persistent application data.
 
 ## Safety rules for future changes
 
