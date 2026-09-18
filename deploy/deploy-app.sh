@@ -37,7 +37,17 @@ services="$(docker compose config --services)"
 grep -Fxq app <<< "$services" \
   || fail "The Compose project does not define an app service."
 
-configured_image="$(docker compose config --images app)"
+configured_image="$(docker compose config | awk '
+  /^  app:$/ { in_app = 1; next }
+  in_app && /^    image:/ {
+    sub(/^    image:[[:space:]]*/, "", $0)
+    print
+    exit
+  }
+  in_app && /^  [^[:space:]]/ { in_app = 0 }
+')"
+[[ -n "$configured_image" ]] \
+  || fail "Unable to determine the app service image from the Compose project."
 [[ "$configured_image" == "$compose_image" ]] \
   || fail "The app service image is '$configured_image'; expected '$compose_image'."
 
