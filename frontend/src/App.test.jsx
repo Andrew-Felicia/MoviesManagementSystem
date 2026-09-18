@@ -1,8 +1,18 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { moviesToCsv } from './utils/movieCsv'
+import { movieApi } from './api/movies'
+
+const createBatch = movieApi.createBatch
+beforeEach(() => {
+  // Keep app tests on their mocked HTTP transport; XHR events are tested in movies.test.js.
+  vi.spyOn(movieApi, 'createBatch').mockImplementation((movies, onProgress) => {
+    onProgress({ stage: 'uploading', percent: 25 })
+    return createBatch(movies)
+  })
+})
 
 const admin = { username: 'admin', role: 'ADMIN' }
 const movies = [

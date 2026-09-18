@@ -15,6 +15,55 @@ function mockRequest(apiResponse) {
 afterEach(() => vi.restoreAllMocks())
 
 describe('movieApi', () => {
+  function mockUpload() {
+    const xhr = { upload: {}, open: vi.fn(), setRequestHeader: vi.fn(), send: vi.fn() }
+    vi.stubGlobal('XMLHttpRequest', vi.fn(function () { return xhr }))
+    mockRequest(response({}))
+    return xhr
+  }
+
+  it('reports uploaded bytes separately from server saving and keeps CSRF protection', async () => {
+    const xhr = mockUpload()
+    const progress = vi.fn()
+    const movies = [{ title: 'Arrival' }]
+    const pending = movieApi.createBatch(movies, progress)
+    await vi.waitFor(() => expect(xhr.send).toHaveBeenCalled())
+    expect(xhr.open).toHaveBeenCalledWith('POST', '/api/movies/batch')
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith('X-XSRF-TOKEN', 'csrf-token')
+    expect(xhr.send).toHaveBeenCalledWith(JSON.stringify({ movies }))
+    expect(progress).toHaveBeenCalledWith({ stage: 'preparing' })
+    xhr.upload.onprogress({ lengthComputable: true, loaded: 42, total: 100 })
+    expect(progress).toHaveBeenLastCalledWith({ stage: 'uploading', percent: 42 })
+    xhr.upload.onprogress({ lengthComputable: false })
+    expect(progress).toHaveBeenLastCalledWith({ stage: 'uploading', percent: undefined })
+    xhr.upload.onload()
+    expect(progress).toHaveBeenLastCalledWith({ stage: 'saving' })
+    xhr.status = 201
+    xhr.response = { importedCount: 1, movies }
+    xhr.onload()
+    await expect(pending).resolves.toEqual(xhr.response)
+  })
+
+  it.each([
+    [400, { error: 'Invalid poster', fieldErrors: { posterUrl: 'Too large' } }, 'Invalid poster'],
+    [413, null, 'Request failed (413)'],
+  ])('preserves upload HTTP errors (%s)', async (status, body, message) => {
+    const xhr = mockUpload()
+    const pending = movieApi.createBatch([], vi.fn())
+    await vi.waitFor(() => expect(xhr.send).toHaveBeenCalled())
+    xhr.status = status
+    xhr.response = body
+    xhr.onload()
+    await expect(pending).rejects.toMatchObject({ status, message, fieldErrors: body?.fieldErrors || {} })
+  })
+
+  it.each(['onerror', 'onabort'])('handles interrupted uploads (%s)', async (event) => {
+    const xhr = mockUpload()
+    const pending = movieApi.createBatch([], vi.fn())
+    await vi.waitFor(() => expect(xhr.send).toHaveBeenCalled())
+    xhr[event]()
+    await expect(pending).rejects.toThrow('duplicate movies will be skipped')
+  })
   it('loads a single movie using the session cookie', async () => {
     const movie = { id: 1, title: 'Arrival' }
     mockRequest(response(movie))

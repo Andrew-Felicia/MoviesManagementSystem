@@ -129,6 +129,7 @@ export default function App() {
   const [passwordError, setPasswordError] = useState('')
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchImporting, setBatchImporting] = useState(false)
+  const [batchProgress, setBatchProgress] = useState(null)
   const [batchError, setBatchError] = useState('')
   const [batchAction, setBatchAction] = useState('')
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
@@ -380,17 +381,20 @@ export default function App() {
     setBatchImporting(true)
     setBatchError('')
     try {
-      const result = await movieApi.createBatch(batch)
+      const result = await movieApi.createBatch(batch, setBatchProgress)
       setMovies((current) => [...current, ...result.movies])
       setBatchOpen(false)
       setToast(copy.imported(result.importedCount, result.skippedDuplicates))
     } catch (requestError) {
       const endpointUnavailable = requestError.status === 404 || requestError.status === 405
-      setBatchError(endpointUnavailable
+      setBatchError(requestError.code === 'IMPORT_NETWORK' || requestError.code === 'IMPORT_ABORTED'
+        ? (language === 'zh' ? '导入连接中断，请检查网络并重试；重复电影会自动跳过。' : 'Import connection interrupted. Check your connection and retry; duplicate movies will be skipped.')
+        : endpointUnavailable
         ? copy.batchEndpointUnavailable
         : Object.values(requestError.fieldErrors || {})[0] || requestError.message)
     } finally {
       setBatchImporting(false)
+      setBatchProgress(null)
     }
   }
 
@@ -563,7 +567,7 @@ export default function App() {
       <footer className="site-footer"><BrandMark /><span>FRAMEBASE</span><p>{copy.footer}</p><small>{copy.footerNote}</small></footer>
 
       {formOpen && <MovieForm language={language} movie={formMovie} saving={saving} serverErrors={serverErrors} onClose={() => setFormOpen(false)} onSave={saveMovie} />}
-      {batchOpen && <BatchImportDialog language={language} busy={batchImporting} error={batchError} onClose={() => setBatchOpen(false)} onImport={importMovies} onDownloadTemplate={downloadTemplate} />}
+      {batchOpen && <BatchImportDialog language={language} busy={batchImporting} progress={batchProgress} error={batchError} onClose={() => setBatchOpen(false)} onImport={importMovies} onDownloadTemplate={downloadTemplate} />}
       {passwordDialogOpen && <PasswordChangeDialog language={language} username={currentUser.username} busy={changingPassword} error={passwordError} onClose={() => setPasswordDialogOpen(false)} onSave={changePassword} />}
       {adminUsersOpen && <AdminUsersDialog language={language} users={adminUsers} loading={adminUsersLoading} error={adminUsersError} resetError={adminResetError} busy={adminResetting} onClose={() => setAdminUsersOpen(false)} onReset={resetUserPassword} />}
       {deleteMovie && <ConfirmDialog movie={deleteMovie} busy={deleting} copy={copy} onCancel={() => setDeleteMovie(null)} onConfirm={confirmDelete} />}

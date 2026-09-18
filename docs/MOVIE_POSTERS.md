@@ -13,6 +13,16 @@ CSV itself carries the posters. The import limit is 100 MiB and 5,000 movies;
 each individual image must be at most 256 KiB. Large exports over 100 MiB must
 be split into smaller CSV files before importing.
 
+The import dialog shows file-reading progress, CSV validation, upload progress
+based on bytes sent, and an indeterminate saving stage while the backend
+processes the movies. Uploading 100% does not mean the import has finished.
+The dialog unlocks on failure so the same file can be retried; duplicates are
+still skipped. English and Chinese messages are supported.
+
+If an already-open page still reports the previous 5 MB limit after deployment,
+reload the page to load the latest frontend bundle. The current limit is shown
+in the empty import dialog.
+
 Restart the backend after updating the code. Its startup SQL adds the nullable
 `movies.poster_url TEXT` column automatically and leaves existing rows intact.
 The migration is idempotent. Older application versions can ignore the extra
