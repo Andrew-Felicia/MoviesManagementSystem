@@ -16,12 +16,22 @@ printf '%s\n' "$*" >> "$FAKE_LOG"
 
 if [[ "$1" == "compose" ]]; then
   shift
-  if [[ "$1 $2" == "config --quiet" ]]; then exit 0; fi
-  if [[ "$1 $2" == "config --services" ]]; then printf 'app\ndb\n'; exit 0; fi
-  if [[ "$1 $2" == "config --images" ]]; then printf '%s\n' "$EXPECTED_COMPOSE_IMAGE"; exit 0; fi
-  if [[ "$1 $2" == "ps -q" ]]; then printf 'old-container\n'; exit 0; fi
+  cmd="$1 ${2:-}"
+  if [[ "$cmd" == "config --quiet" ]]; then exit 0; fi
+  if [[ "$cmd" == "config --services" ]]; then printf 'app\ndb\n'; exit 0; fi
+  if [[ "$1" == "config" ]]; then
+    cat <<EOF
+services:
+  app:
+    image: $EXPECTED_COMPOSE_IMAGE
+  db:
+    image: postgres:17-alpine
+EOF
+    exit 0
+  fi
+  if [[ "$cmd" == "ps -q" ]]; then printf 'old-container\n'; exit 0; fi
   if [[ "$1" == "ps" || "$1" == "logs" || "$1" == "up" ]]; then exit 0; fi
-  if [[ "$1 $2" == "port app" ]]; then printf '127.0.0.1:8080\n'; exit 0; fi
+  if [[ "$cmd" == "port app" ]]; then printf '127.0.0.1:8080\n'; exit 0; fi
 fi
 
 if [[ "$1" == "inspect" ]]; then printf 'sha256:old\n'; exit 0; fi
