@@ -107,18 +107,21 @@ from the same Spring Boot application:
   docker build -f backend/Dockerfile -t movie-library .
 ```
 
-bt panel
-```angular2html
-========================面板账户登录信息==========================
+## Production reverse proxy
 
- 【云服务器】请在安全组放行 18268 端口
- 外网ipv4面板地址: https://20.6.128.138:18268/6da28c2c
- 内网面板地址:     https://172.16.0.4:18268/6da28c2c
- username: xp11pyby
- password: 1ba7eb93
+Production uses Nginx managed by BT. Nginx terminates HTTPS and proxies the
+entire domain, including `/api`, to the Spring Boot container through
+`127.0.0.1:8080`. The VPS Compose `app` service must publish only that loopback
+address:
 
- 浏览器访问以下链接，添加宝塔客服
- https://www.bt.cn/new/wechat_customer
-==================================================================
-Time consumed: 2 Minute!
+```yaml
+ports:
+  - "127.0.0.1:8080:8080"
 ```
+
+The 500-movie poster CSV is about 20 MiB, and imports can contain up to 100 MiB.
+Set `client_max_body_size 150m;` for this Nginx site and use a longer proxy
+timeout while the backend saves posters. See
+[docs/NGINX_DEPLOYMENT.md](docs/NGINX_DEPLOYMENT.md) for the exact configuration
+and safe VPS migration steps. Keep panel addresses, credentials, certificates,
+and deployment secrets outside this repository.
