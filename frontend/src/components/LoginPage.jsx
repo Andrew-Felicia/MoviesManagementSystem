@@ -5,6 +5,7 @@ import { BrandMark } from './Icons'
 const COPY = {
   en: {
     locale: 'en', brandSubtitle: 'Personal movie index', switchLanguage: 'Switch to Chinese', switchText: '中文', login: 'Login',
+    archiveCode: 'Private archive / 2026', archiveStatus: 'Archive online', curated: 'Curated by you', localFirst: 'Personal · searchable · private', selectedFilms: 'Selected films', indexMode: 'Index mode', personalCatalog: 'Personal catalog', accessReady: 'Access node ready', secureSession: 'Encrypted session handshake',
     manage: 'Manage', yourFilms: 'Your films', posterGallery: 'Classic cinema poster gallery', scrollLabel: 'Scroll to explore Framebase', scroll: 'Scroll to explore',
     collectionEyebrow: 'Your collection, in focus', collectionTitle: 'Everything worth watching.', collectionAccent: 'Easy to find again.', collectionBody: 'Framebase turns a scattered list of files and memories into one searchable, personal film index.',
     exampleIndex: 'Example movie index', searchLibrary: 'Search your library', threeTitles: '3 titles', scienceFiction: 'Science Fiction', crime: 'Crime', thriller: 'Thriller', watchlist: 'Watchlist', watched: 'Watched',
@@ -20,6 +21,7 @@ const COPY = {
   },
   zh: {
     locale: 'zh-CN', brandSubtitle: '私人电影索引', switchLanguage: '切换到英文', switchText: 'EN', login: '登录',
+    archiveCode: '私人片库 / 2026', archiveStatus: '片库在线', curated: '由你策展', localFirst: '私人 · 可搜索 · 重视隐私', selectedFilms: '精选电影', indexMode: '索引模式', personalCatalog: '私人目录', accessReady: '访问节点已就绪', secureSession: '加密会话握手',
     manage: '管理', yourFilms: '你的电影', posterGallery: '经典电影海报画廊', scrollLabel: '向下探索 Framebase', scroll: '向下探索',
     collectionEyebrow: '你的收藏，一目了然', collectionTitle: '每一部值得观看的电影。', collectionAccent: '都能轻松再次找到。', collectionBody: 'Framebase 将散落的电影文件与观影记忆，整理成一个可搜索的私人电影索引。',
     exampleIndex: '电影索引示例', searchLibrary: '搜索你的片库', threeTitles: '3 部电影', scienceFiction: '科幻', crime: '犯罪', thriller: '惊悚', watchlist: '待观看', watched: '已观看',
@@ -95,7 +97,7 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
       <section className="login-story" id="top">
         <header className="login-topbar">
           <a className="brand login-brand" href="/" aria-label={language === 'zh' ? 'Framebase 首页' : 'Framebase home'}>
-            <BrandMark />
+            <span className="login-brand-symbol"><BrandMark /></span>
             <span><strong>FRAMEBASE</strong><small>{t.brandSubtitle}</small></span>
           </a>
           <div className="login-top-actions">
@@ -109,30 +111,44 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
         </header>
         <div className="login-stage">
           <div className="login-copy">
-{/*           <span className="eyebrow">Private collection access</span> */}
+            <div className="login-coordinate"><span>01</span><span>{t.archiveCode}</span></div>
             <h1><span className="login-title-line">{t.manage}</span><em className="login-title-line">{t.yourFilms}</em></h1>
-{/*           <p>One secure doorway to your catalog, ratings, watch history, and every movie night ahead.</p> */}
+            <p>{t.collectionBody}</p>
+            <div className="login-status-strip">
+              <span><i />{t.archiveStatus}</span>
+              <span>{t.curated}</span>
+              <span>{t.localFirst}</span>
+            </div>
+            <div className="login-command" aria-hidden="true"><span>framebase</span><code>catalog --open --private</code><b>↵</b></div>
           </div>
 
-          <div className="login-poster-gallery" aria-label={t.posterGallery}>
-            <figure className="classic-poster poster-metropolis">
-              <img src="/posters/metropolis-1927.jpg" alt="Metropolis, 1927 classic film poster" width="960" height="1290" />
-              <figcaption><strong>Metropolis</strong><span>Fritz Lang · 1927</span></figcaption>
-            </figure>
-            <figure className="classic-poster poster-caligari">
-              <img src="/posters/caligari-1920.jpg" alt="The Cabinet of Dr. Caligari, 1920 classic film poster" width="960" height="1274" />
-              <figcaption><strong>The Cabinet of Dr. Caligari</strong><span>Robert Wiene · 1920</span></figcaption>
-            </figure>
-            <figure className="classic-poster poster-general">
-              <img src="/posters/the-general-1926.png" alt="The General, 1926 classic film poster" width="390" height="612" />
-              <figcaption><strong>The General</strong><span>Buster Keaton · 1926</span></figcaption>
-            </figure>
+          <div className="login-artboard">
+            <span className="artboard-label">FRAMEBASE®</span>
+            <span className="artboard-index">001—003</span>
+            <div className="artboard-orbit" aria-hidden="true"><i /><i /><i /></div>
+            <div className="artboard-shape artboard-shape-one" aria-hidden="true" />
+            <div className="artboard-shape artboard-shape-two" aria-hidden="true" />
+            <div className="artboard-scan" aria-hidden="true" />
+            <div className="login-poster-gallery" aria-label={t.posterGallery}>
+              <figure className="classic-poster poster-shawshank">
+                <img src="https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="The Shawshank Redemption, 1994 IMDb poster" width="300" height="444" />
+                <figcaption><strong>The Shawshank Redemption</strong><span>Frank Darabont · 1994</span></figcaption>
+              </figure>
+              <figure className="classic-poster poster-interstellar">
+                <img src="https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="Interstellar, 2014 IMDb poster" width="300" height="444" />
+                <figcaption><strong>Interstellar</strong><span>Christopher Nolan · 2014</span></figcaption>
+              </figure>
+              <figure className="classic-poster poster-godfather">
+                <img src="https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg" alt="The Godfather, 1972 IMDb poster" width="300" height="444" />
+                <figcaption><strong>The Godfather</strong><span>Francis Ford Coppola · 1972</span></figcaption>
+              </figure>
+            </div>
+            <div className="artboard-count"><strong>03</strong><span>{t.selectedFilms}</span></div>
+            <div className="artboard-mode"><span>{t.indexMode}</span><strong>{t.personalCatalog}</strong></div>
+            <span className="artboard-caption">FILM / MEMORY / INDEX</span>
           </div>
         </div>
-{/*         <div className="login-security-note"> */}
-{/*           <ShieldCheck size={18} /> */}
-{/*           <span><strong>Session protected</strong><small>Credentials are verified on the server</small></span> */}
-{/*         </div> */}
+        <div className="login-marquee" aria-hidden="true"><span>WATCH / RATE / REMEMBER / WATCH / RATE / REMEMBER / WATCH / RATE / REMEMBER / WATCH / RATE / REMEMBER / WATCH / RATE / REMEMBER / WATCH / RATE / REMEMBER /</span></div>
         <a className="login-scroll-cue" href="#organize" aria-label={t.scrollLabel}>
           <span>{t.scroll}</span><ArrowDown size={16} />
         </a>
@@ -140,28 +156,30 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
 
       <section className="landing-section landing-intro" id="organize">
         <div className="landing-heading">
+          <span className="landing-section-number" aria-hidden="true">02 / 04</span>
           <span className="eyebrow">{t.collectionEyebrow}</span>
           <h2>{t.collectionTitle}<br /><em>{t.collectionAccent}</em></h2>
           <p>{t.collectionBody}</p>
         </div>
 
         <div className="landing-index" aria-label={t.exampleIndex}>
-          <div className="landing-index-toolbar"><Search size={16} /><span>{t.searchLibrary}</span><small>{t.threeTitles}</small></div>
-          <div className="landing-index-row"><span className="landing-poster blue">A</span><div><strong>Arrival</strong><small>Denis Villeneuve · 2016</small></div><span>{t.scienceFiction}</span><em><Star size={13} />9.2</em></div>
-          <div className="landing-index-row"><span className="landing-poster amber">H</span><div><strong>Heat</strong><small>Michael Mann · 1995</small></div><span>{t.crime}</span><em>{t.watchlist}</em></div>
-          <div className="landing-index-row"><span className="landing-poster green">P</span><div><strong>Parasite</strong><small>Bong Joon Ho · 2019</small></div><span>{t.thriller}</span><em><Check size={13} />{t.watched}</em></div>
+          <div className="landing-index-toolbar"><span className="index-window-dots" aria-hidden="true"><i /><i /><i /></span><Search size={16} /><span>{t.searchLibrary}</span><small>{t.threeTitles}</small></div>
+          <div className="landing-index-row" data-index="001"><span className="landing-poster blue">A</span><div><strong>Arrival</strong><small>Denis Villeneuve · 2016</small></div><span>{t.scienceFiction}</span><em><Star size={13} />9.2</em></div>
+          <div className="landing-index-row" data-index="002"><span className="landing-poster amber">H</span><div><strong>Heat</strong><small>Michael Mann · 1995</small></div><span>{t.crime}</span><em>{t.watchlist}</em></div>
+          <div className="landing-index-row" data-index="003"><span className="landing-poster green">P</span><div><strong>Parasite</strong><small>Bong Joon Ho · 2019</small></div><span>{t.thriller}</span><em><Check size={13} />{t.watched}</em></div>
         </div>
       </section>
 
       <section className="landing-section landing-features" aria-labelledby="features-title">
         <div className="landing-heading compact">
+          <span className="landing-section-number" aria-hidden="true">03 / 04</span>
           <span className="eyebrow">{t.featuresEyebrow}</span>
           <h2 id="features-title">{t.featuresTitle}<br /><em>{t.featuresAccent}</em></h2>
         </div>
         <div className="feature-list">
-          <article><span className="feature-number">01</span><Film size={23} /><div><h3>{t.featureOneTitle}</h3><p>{t.featureOneBody}</p></div></article>
-          <article><span className="feature-number">02</span><Clock3 size={23} /><div><h3>{t.featureTwoTitle}</h3><p>{t.featureTwoBody}</p></div></article>
-          <article><span className="feature-number">03</span><Star size={23} /><div><h3>{t.featureThreeTitle}</h3><p>{t.featureThreeBody}</p></div></article>
+          <article><span className="feature-number">01</span><Film size={23} /><div><h3>{t.featureOneTitle}</h3><p>{t.featureOneBody}</p><span className="feature-signal" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
+          <article><span className="feature-number">02</span><Clock3 size={23} /><div><h3>{t.featureTwoTitle}</h3><p>{t.featureTwoBody}</p><span className="feature-signal delay-one" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
+          <article><span className="feature-number">03</span><Star size={23} /><div><h3>{t.featureThreeTitle}</h3><p>{t.featureThreeBody}</p><span className="feature-signal delay-two" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
         </div>
       </section>
 
@@ -171,6 +189,7 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
           <span className="eyebrow">{t.privateEyebrow}</span>
           <h2>{t.ctaTitle}</h2>
           <p>{t.ctaBody}</p>
+          <div className="cta-system-tags" aria-hidden="true"><span>SESSION / 01</span><span>PRIVATE INDEX</span><span>READY</span></div>
         </div>
         <button className="button button-primary landing-login-button" type="button" onClick={() => setPanelOpen(true)}>
           <LockKeyhole size={16} />{t.openFramebase}
@@ -184,7 +203,14 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
       {panelOpen && <div className="login-modal-backdrop">
         <section className="login-panel" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
           <button className="login-close" type="button" onClick={() => setPanelOpen(false)} aria-label={t.closeLogin}><X size={18} /></button>
+          <div className="login-panel-art" aria-hidden="true">
+            <span>FRAMEBASE / ACCESS</span>
+            <div className="login-panel-grid" />
+            <div className="login-panel-mark"><BrandMark /><strong>FB</strong></div>
+            <div className="login-panel-art-footer"><small>PRIVATE<br />MOVIE<br />INDEX</small><b>51.5072° N<br />0.1276° W</b></div>
+          </div>
           <div className="login-card">
+            <div className="login-card-status"><span><i />{t.accessReady}</span><small>{t.secureSession}</small></div>
             <div className="login-lock"><LockKeyhole size={22} /></div>
             <span className="eyebrow">{registering ? t.newMember : t.securePortal}</span>
             <h2 id="login-dialog-title">{registering ? t.createAccount : t.welcomeBack}</h2>
