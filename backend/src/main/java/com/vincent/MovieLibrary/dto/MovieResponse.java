@@ -15,6 +15,10 @@ public record MovieResponse(
         Double personalRating,
         String filePath,
         String notes,
+        String synopsis,
+        String castMembers,
+        String imdbUrl,
+        String trailerUrl,
         LocalDateTime createdAt,
         String posterUrl
 ) {

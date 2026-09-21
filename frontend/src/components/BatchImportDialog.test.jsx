@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import BatchImportDialog from './BatchImportDialog'
 import { moviesToCsv } from '../utils/movieCsv'
 
-const movie = { title: 'Arrival', releaseYear: 2016, director: 'Denis Villeneuve', genre: 'Science Fiction', runtimeMinutes: 116, language: 'English', watched: true, personalRating: 9.2, filePath: '/movies/arrival.mkv', notes: null }
+const movie = { title: 'Arrival', releaseYear: 2016, director: 'Denis Villeneuve', genre: 'Science Fiction', runtimeMinutes: 116, language: 'English', watched: true, personalRating: 9.2, filePath: '/movies/arrival.mkv', notes: null, synopsis: null, castMembers: null, imdbUrl: null, trailerUrl: null }
 
 describe('BatchImportDialog', () => {
   it('parses a selected CSV and submits all movies', async () => {

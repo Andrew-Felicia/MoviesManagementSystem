@@ -118,7 +118,8 @@ class MovieServiceStressTest {
     private static MovieRequest request() {
         return new MovieRequest(
                 "Stress Movie", 2026, "Director", "Drama", 100,
-                "English", false, null, "/movies/stress.mkv", null, null
+                "English", false, null, "/movies/stress.mkv", null,
+                null, null, null, null, null
         );
     }
 }

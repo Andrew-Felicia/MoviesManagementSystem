@@ -51,6 +51,18 @@ public class Movie {
 
     private String notes;
 
+    @Column(columnDefinition = "TEXT")
+    private String synopsis;
+
+    @Column(name = "cast_members", columnDefinition = "TEXT")
+    private String castMembers;
+
+    @Column(name = "imdb_url", length = 500)
+    private String imdbUrl;
+
+    @Column(name = "trailer_url", length = 500)
+    private String trailerUrl;
+
     @Column(name = "poster_url", columnDefinition = "TEXT")
     private String posterUrl;
 

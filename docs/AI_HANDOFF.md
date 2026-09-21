@@ -56,8 +56,13 @@ Internet → BT Nginx (HTTPS) → localhost:8080 → app container → PostgreSQ
 ### Movie features
 
 - Create, edit, delete, search, filter, sort, and paginate movie entries.
+- Movie details can include an optional synopsis, comma-separated cast,
+  validated IMDb title URL, and HTTP(S) trailer URL. The details page supports
+  editing, watch-status changes, and previous/next navigation in the current
+  catalog order.
 - The catalog shows 12 movies per page.
 - CSV import/export uses the headers defined in `frontend/src/utils/movieCsv.js`.
+  The richer detail fields are optional, so older CSV files remain importable.
 - CSV imports skip duplicate entries and report valid/invalid results.
 - Batch actions apply to the entire signed-in user's library, not merely the
   visible filtered page: watch all, unwatch all, and delete all.

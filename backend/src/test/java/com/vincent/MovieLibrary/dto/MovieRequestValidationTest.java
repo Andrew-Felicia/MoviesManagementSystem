@@ -144,7 +144,15 @@ class MovieRequestValidationTest {
                 invalid("file path too long", new RequestBuilder().filePath("/".repeat(1001)),
                         "filePath", "File path must not exceed 1000 characters"),
                 invalid("notes too long", new RequestBuilder().notes("N".repeat(2001)),
-                        "notes", "Notes must not exceed 2000 characters")
+                        "notes", "Notes must not exceed 2000 characters"),
+                invalid("synopsis too long", new RequestBuilder().synopsis("S".repeat(5001)),
+                        "synopsis", "Synopsis must not exceed 5000 characters"),
+                invalid("cast too long", new RequestBuilder().castMembers("C".repeat(2001)),
+                        "castMembers", "Cast must not exceed 2000 characters"),
+                invalid("invalid IMDb URL", new RequestBuilder().imdbUrl("https://example.com/title/tt0111161"),
+                        "imdbUrl", "Use an IMDb title URL such as https://www.imdb.com/title/tt0111161/"),
+                invalid("invalid trailer URL", new RequestBuilder().trailerUrl("javascript:alert(1)"),
+                        "trailerUrl", "Use an HTTP(S) trailer URL")
         );
     }
 
@@ -168,6 +176,10 @@ class MovieRequestValidationTest {
         private Double personalRating = 9.8;
         private String filePath = "/movies/interstellar.mkv";
         private String notes = "Amazing soundtrack.";
+        private String synopsis;
+        private String castMembers;
+        private String imdbUrl;
+        private String trailerUrl;
         private String posterUrl;
 
         RequestBuilder posterUrl(String value) {
@@ -225,6 +237,26 @@ class MovieRequestValidationTest {
             return this;
         }
 
+        RequestBuilder synopsis(String value) {
+            synopsis = value;
+            return this;
+        }
+
+        RequestBuilder castMembers(String value) {
+            castMembers = value;
+            return this;
+        }
+
+        RequestBuilder imdbUrl(String value) {
+            imdbUrl = value;
+            return this;
+        }
+
+        RequestBuilder trailerUrl(String value) {
+            trailerUrl = value;
+            return this;
+        }
+
         MovieRequest build() {
             return new MovieRequest(
                     title,
@@ -236,7 +268,7 @@ class MovieRequestValidationTest {
                     watched,
                     personalRating,
                     filePath,
-                    notes, posterUrl
+                    notes, synopsis, castMembers, imdbUrl, trailerUrl, posterUrl
             );
         }
     }

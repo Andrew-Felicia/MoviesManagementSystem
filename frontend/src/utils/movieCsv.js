@@ -12,7 +12,14 @@ export const REQUIRED_MOVIE_CSV_HEADERS = [
   'filePath',
   'notes',
 ]
-export const MOVIE_CSV_HEADERS = [...REQUIRED_MOVIE_CSV_HEADERS, 'posterUrl']
+export const MOVIE_CSV_HEADERS = [
+  ...REQUIRED_MOVIE_CSV_HEADERS,
+  'synopsis',
+  'castMembers',
+  'imdbUrl',
+  'trailerUrl',
+  'posterUrl',
+]
 
 const MAX_BATCH_SIZE = 5000
 
@@ -118,6 +125,10 @@ export function parseMoviesCsv(csv) {
       personalRating: rating === '' ? null : Number(rating),
       filePath: value('filePath').trim(),
       notes: value('notes').trim() || null,
+      synopsis: value('synopsis').trim() || null,
+      castMembers: value('castMembers').trim() || null,
+      imdbUrl: value('imdbUrl').trim() || null,
+      trailerUrl: value('trailerUrl').trim() || null,
       posterUrl: posterUrl || null,
     }
   })

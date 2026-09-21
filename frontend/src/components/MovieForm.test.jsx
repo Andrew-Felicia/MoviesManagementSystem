@@ -6,6 +6,27 @@ import MovieForm from './MovieForm'
 const movie = { title: 'Arrival', releaseYear: 2016, director: 'Denis Villeneuve', genre: 'Science Fiction', runtimeMinutes: 116, language: 'English', watched: false, personalRating: null, filePath: '/movies/arrival.mkv', notes: null }
 
 describe('movie poster form', () => {
+  it('saves and validates the richer details fields', async () => {
+    const onSave = vi.fn()
+    render(<MovieForm movie={movie} onSave={onSave} onClose={vi.fn()} />)
+    await userEvent.type(screen.getByLabelText('Synopsis optional'), 'First contact changes everything.')
+    await userEvent.type(screen.getByLabelText('Cast optional'), 'Amy Adams, Jeremy Renner')
+    await userEvent.type(screen.getByLabelText('IMDb title URL optional'), 'https://www.imdb.com/title/tt2543164/')
+    await userEvent.type(screen.getByLabelText('Trailer URL optional'), 'https://example.com/trailer')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      synopsis: 'First contact changes everything.',
+      castMembers: 'Amy Adams, Jeremy Renner',
+      imdbUrl: 'https://www.imdb.com/title/tt2543164/',
+      trailerUrl: 'https://example.com/trailer',
+    }))
+
+    await userEvent.clear(screen.getByLabelText('IMDb title URL optional'))
+    await userEvent.type(screen.getByLabelText('IMDb title URL optional'), 'https://example.com/not-imdb')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(screen.getByText(/Use an IMDb title URL/)).toBeInTheDocument()
+  })
+
   it('previews, saves, edits, and removes a poster URL', async () => {
     const onSave = vi.fn()
     const { container } = render(<MovieForm movie={movie} onSave={onSave} onClose={vi.fn()} />)

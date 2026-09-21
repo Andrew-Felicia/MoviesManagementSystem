@@ -173,6 +173,10 @@ public class MovieService {
         movie.setPersonalRating(request.personalRating());
         movie.setFilePath(request.filePath());
         movie.setNotes(request.notes());
+        movie.setSynopsis(request.synopsis());
+        movie.setCastMembers(request.castMembers());
+        movie.setImdbUrl(request.imdbUrl());
+        movie.setTrailerUrl(request.trailerUrl());
         movie.setPosterUrl(poster);
     }
 
@@ -190,6 +194,10 @@ public class MovieService {
                 movie.getPersonalRating(),
                 movie.getFilePath(),
                 movie.getNotes(),
+                movie.getSynopsis(),
+                movie.getCastMembers(),
+                movie.getImdbUrl(),
+                movie.getTrailerUrl(),
                 movie.getCreatedAt(),
                 movie.getPosterUrl()
         );

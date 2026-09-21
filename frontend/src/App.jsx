@@ -104,6 +104,7 @@ function downloadCsv(csv, fileName) {
 
 export default function App() {
   const [detailMovieId, setDetailMovieId] = useState(movieIdFromLocation)
+  const [detailRevision, setDetailRevision] = useState(0)
   const [language, setLanguage] = useState('en')
   const [currentUser, setCurrentUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -206,7 +207,7 @@ export default function App() {
   const filteredMovies = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return movies
-      .filter((movie) => !normalized || [movie.title, movie.director, movie.genre, movie.language].some((value) => value?.toLowerCase().includes(normalized)))
+      .filter((movie) => !normalized || [movie.title, movie.director, movie.genre, movie.language, movie.castMembers, movie.synopsis].some((value) => value?.toLowerCase().includes(normalized)))
       .filter((movie) => genre === 'All genres' || movie.genre === genre)
       .filter((movie) => status === 'All movies' || (status === 'Watched' ? movie.watched : !movie.watched))
       .sort((a, b) => {
@@ -250,6 +251,7 @@ export default function App() {
     try {
       const saved = formMovie ? await movieApi.update(formMovie.id, values) : await movieApi.create(values)
       setMovies((current) => formMovie ? current.map((movie) => movie.id === saved.id ? saved : movie) : [...current, saved])
+      if (formMovie && String(formMovie.id) === String(detailMovieId)) setDetailRevision((current) => current + 1)
       setFormOpen(false)
       setToast(formMovie ? copy.movieUpdated : copy.movieAdded)
     } catch (requestError) {
@@ -351,8 +353,10 @@ export default function App() {
       const saved = await movieApi.update(movie.id, { ...movie, watched: !movie.watched, createdAt: undefined, id: undefined })
       setMovies((current) => current.map((item) => item.id === saved.id ? saved : item))
       setToast(saved.watched ? copy.markedWatched : copy.movedWatchlist)
+      return saved
     } catch (requestError) {
       setToast(requestError.message)
+      return null
     }
   }
 
@@ -453,6 +457,10 @@ export default function App() {
   }
 
   const hasFilters = query || genre !== 'All genres' || status !== 'All movies'
+  const detailMovieIndex = filteredMovies.findIndex((movie) => String(movie.id) === String(detailMovieId))
+  const previousDetailMovie = detailMovieIndex > 0 ? filteredMovies[detailMovieIndex - 1] : null
+  const nextDetailMovie = detailMovieIndex >= 0 && detailMovieIndex < filteredMovies.length - 1
+    ? filteredMovies[detailMovieIndex + 1] : null
 
   function goToPage(page) {
     setCurrentPage(Math.min(Math.max(page, 1), pageCount))
@@ -499,7 +507,7 @@ export default function App() {
       </header>
 
       <main>
-        {detailMovieId ? <MovieDetailsPage key={`${currentUser.username}:${detailMovieId}`} movieId={detailMovieId} language={language} onSessionExpired={handleSessionExpired} /> : <>
+        {detailMovieId ? <MovieDetailsPage key={`${currentUser.username}:${detailMovieId}`} movieId={detailMovieId} language={language} revision={detailRevision} previousMovie={previousDetailMovie} nextMovie={nextDetailMovie} onEdit={openEdit} onToggleWatched={toggleWatched} onSessionExpired={handleSessionExpired} /> : <>
         <section className="hero-strip" id="catalog" onPointerMove={moveHeroSpotlight} onPointerLeave={resetHeroSpotlight}>
           <div className="hero-copy">
             <span className="eyebrow">{copy.heroEyebrow}</span>

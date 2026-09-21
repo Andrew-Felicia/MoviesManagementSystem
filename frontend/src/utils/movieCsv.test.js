@@ -4,7 +4,10 @@ import { MOVIE_CSV_HEADERS, moviesToCsv, parseMoviesCsv } from './movieCsv'
 const movie = {
   title: 'Paris, Texas', releaseYear: 1984, director: 'Wim Wenders', genre: 'Drama',
   runtimeMinutes: 145, language: 'English', watched: true, personalRating: 9.4,
-  filePath: '/movies/paris-texas.mkv', notes: 'Quiet, "beautiful" film.\nWatch again.', posterUrl: 'https://example.com/poster.jpg',
+  filePath: '/movies/paris-texas.mkv', notes: 'Quiet, "beautiful" film.\nWatch again.',
+  synopsis: 'A man returns from the desert.', castMembers: 'Harry Dean Stanton, Nastassja Kinski',
+  imdbUrl: 'https://www.imdb.com/title/tt0087884/', trailerUrl: 'https://example.com/trailer',
+  posterUrl: 'https://example.com/poster.jpg',
 }
 
 describe('movie CSV utilities', () => {

@@ -10,6 +10,8 @@ const movie = {
   id: 1, title: 'Arrival', releaseYear: 2016, director: 'Denis Villeneuve', genre: 'Science Fiction',
   runtimeMinutes: 116, language: 'English', watched: true, personalRating: 9.2,
   filePath: '/movies/arrival.mkv', notes: 'First line\nSecond line', createdAt: '2026-09-17T10:30:00',
+  synopsis: 'A linguist learns to communicate with visitors.', castMembers: 'Amy Adams, Jeremy Renner',
+  imdbUrl: 'https://www.imdb.com/title/tt2543164/', trailerUrl: 'https://example.com/arrival-trailer',
 }
 
 afterEach(() => vi.resetAllMocks())
@@ -27,7 +29,26 @@ describe('MovieDetailsPage', () => {
     expect(screen.getByText('Watched')).toBeInTheDocument()
     expect(screen.getByText('English')).toBeInTheDocument()
     expect(screen.getByText('First line Second line')).toBeInTheDocument()
+    expect(screen.getByText('A linguist learns to communicate with visitors.')).toBeInTheDocument()
+    expect(screen.getByText('Amy Adams')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'View on IMDb' })).toHaveAttribute('href', movie.imdbUrl)
+    expect(screen.getByRole('link', { name: 'Watch trailer' })).toHaveAttribute('href', movie.trailerUrl)
     expect(screen.getByText(/Sep 17, 2026/)).toBeInTheDocument()
+  })
+
+  it('supports editing, watch status changes, and neighboring movie navigation', async () => {
+    const onEdit = vi.fn()
+    const onToggleWatched = vi.fn().mockResolvedValue({ ...movie, watched: false })
+    movieApi.get.mockResolvedValue(movie)
+    render(<MovieDetailsPage movieId="1" previousMovie={{ id: 2, title: 'Heat' }} nextMovie={{ id: 3, title: 'Dune' }} onEdit={onEdit} onToggleWatched={onToggleWatched} onSessionExpired={vi.fn()} />)
+    await screen.findByRole('heading', { name: 'Arrival' })
+    expect(screen.getByRole('link', { name: 'Previous movie: Heat' })).toHaveAttribute('href', '#movies/2')
+    expect(screen.getByRole('link', { name: 'Next movie: Dune' })).toHaveAttribute('href', '#movies/3')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit movie' }))
+    expect(onEdit).toHaveBeenCalledWith(movie)
+    await userEvent.click(screen.getByRole('button', { name: 'Move to watchlist' }))
+    await waitFor(() => expect(onToggleWatched).toHaveBeenCalledWith(movie))
+    expect(screen.getByRole('button', { name: 'Mark watched' })).toBeInTheDocument()
   })
 
   it('supports Chinese and empty optional values without treating zero as unrated', async () => {

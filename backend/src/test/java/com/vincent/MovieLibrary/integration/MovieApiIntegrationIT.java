@@ -46,7 +46,11 @@ class MovieApiIntegrationIT {
               "watched": true,
               "personalRating": 9.8,
               "filePath": "/movies/interstellar.mkv",
-              "notes": "Amazing soundtrack."
+              "notes": "Amazing soundtrack.",
+              "synopsis": "Explorers travel through a wormhole in space.",
+              "castMembers": "Matthew McConaughey, Anne Hathaway",
+              "imdbUrl": "https://www.imdb.com/title/tt0816692/",
+              "trailerUrl": "https://example.com/interstellar-trailer"
             }
             """;
 
@@ -61,7 +65,11 @@ class MovieApiIntegrationIT {
               "watched": false,
               "personalRating": 9.5,
               "filePath": "/movies/interstellar-updated.mkv",
-              "notes": "Updated notes."
+              "notes": "Updated notes.",
+              "synopsis": "An updated synopsis.",
+              "castMembers": "Matthew McConaughey, Jessica Chastain",
+              "imdbUrl": "https://www.imdb.com/title/tt0816692/",
+              "trailerUrl": "https://example.com/interstellar-updated-trailer"
             }
             """;
 
@@ -168,7 +176,11 @@ class MovieApiIntegrationIT {
         mockMvc.perform(get("/api/movies/{id}", id).principal(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Interstellar"))
-                .andExpect(jsonPath("$.personalRating").value(9.8));
+                .andExpect(jsonPath("$.personalRating").value(9.8))
+                .andExpect(jsonPath("$.synopsis").value("Explorers travel through a wormhole in space."))
+                .andExpect(jsonPath("$.castMembers").value("Matthew McConaughey, Anne Hathaway"))
+                .andExpect(jsonPath("$.imdbUrl").value("https://www.imdb.com/title/tt0816692/"))
+                .andExpect(jsonPath("$.trailerUrl").value("https://example.com/interstellar-trailer"));
 
         mockMvc.perform(put("/api/movies/{id}", id)
                         .principal(ADMIN)
@@ -182,7 +194,9 @@ class MovieApiIntegrationIT {
         mockMvc.perform(get("/api/movies/{id}", id).principal(ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runtimeMinutes").value(170))
-                .andExpect(jsonPath("$.notes").value("Updated notes."));
+                .andExpect(jsonPath("$.notes").value("Updated notes."))
+                .andExpect(jsonPath("$.synopsis").value("An updated synopsis."))
+                .andExpect(jsonPath("$.castMembers").value("Matthew McConaughey, Jessica Chastain"));
 
         mockMvc.perform(delete("/api/movies/{id}", id).principal(ADMIN))
                 .andExpect(status().isNoContent());

@@ -320,7 +320,7 @@ class MovieControllerTest {
                 .thenReturn(new MovieResponse(
                         12, "Unrated", 2026, "Director", "Drama", 90,
                         "English", false, null, "/movies/unrated.mkv",
-                        null, null, null));
+                        null, null, null, null, null, null, null));
 
         mockMvc.perform(post("/api/movies")
                         .principal(ADMIN)
@@ -357,7 +357,7 @@ class MovieControllerTest {
                 true,
                 9.8,
                 "/movies/interstellar.mkv",
-                "Amazing soundtrack.", null
+                "Amazing soundtrack.", null, null, null, null, null
         );
     }
 
@@ -374,6 +374,7 @@ class MovieControllerTest {
                 9.8,
                 "/movies/" + id + ".mkv",
                 "Notes",
+                null, null, null, null,
                 LocalDateTime.of(2026, 8, 21, 12, 0), null
         );
     }

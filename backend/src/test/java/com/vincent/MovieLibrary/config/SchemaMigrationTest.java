@@ -16,10 +16,15 @@ class SchemaMigrationTest {
             }
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("schema.sql"));
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("schema.sql"));
-            try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT title, poster_url FROM movies")) {
+            try (var statement = connection.createStatement(); var rows = statement.executeQuery(
+                    "SELECT title, poster_url, synopsis, cast_members, imdb_url, trailer_url FROM movies")) {
                 assertThat(rows.next()).isTrue();
                 assertThat(rows.getString("title")).isEqualTo("Existing movie");
                 assertThat(rows.getString("poster_url")).isNull();
+                assertThat(rows.getString("synopsis")).isNull();
+                assertThat(rows.getString("cast_members")).isNull();
+                assertThat(rows.getString("imdb_url")).isNull();
+                assertThat(rows.getString("trailer_url")).isNull();
                 assertThat(rows.next()).isFalse();
             }
         }

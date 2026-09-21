@@ -50,6 +50,22 @@ public record MovieRequest(
         @Size(max = 2000, message = "Notes must not exceed 2000 characters")
         String notes,
 
+        @Size(max = 5000, message = "Synopsis must not exceed 5000 characters")
+        String synopsis,
+
+        @Size(max = 2000, message = "Cast must not exceed 2000 characters")
+        String castMembers,
+
+        @Size(max = 500, message = "IMDb URL must not exceed 500 characters")
+        @Pattern(regexp = "(?i)^https://(?:www\\.)?imdb\\.com/title/tt[0-9]+/?(?:[?#][^\\s]*)?$|^$",
+                message = "Use an IMDb title URL such as https://www.imdb.com/title/tt0111161/")
+        String imdbUrl,
+
+        @Size(max = 500, message = "Trailer URL must not exceed 500 characters")
+        @Pattern(regexp = "(?i)^https?://[^\\s]+$|^$",
+                message = "Use an HTTP(S) trailer URL")
+        String trailerUrl,
+
         @Size(max = 350000, message = "Poster must not exceed 350000 characters")
         @Pattern(regexp = "(?i)^(?:https?://[^\\s]+|data:image/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2})?$",
                 message = "Use an HTTP(S) poster URL or a PNG, JPEG, or WebP image")

@@ -133,7 +133,8 @@ class MovieServiceTest {
                 existingDuplicate.director(), existingDuplicate.genre(),
                 existingDuplicate.runtimeMinutes(), existingDuplicate.language(),
                 existingDuplicate.watched(), existingDuplicate.personalRating(),
-                " /MOVIES/BLADE-RUNNER.MKV ", existingDuplicate.notes(), null);
+                " /MOVIES/BLADE-RUNNER.MKV ", existingDuplicate.notes(),
+                null, null, null, null, null);
         MovieRequest unique = request("Arrival", 2016, false, 8.8, "First contact");
         MovieRequest repeatedUnique = request("ARRIVAL", 2016, false, 8.8, null);
 
@@ -279,6 +280,10 @@ class MovieServiceTest {
         movie.setPersonalRating(rating);
         movie.setFilePath("/movies/" + id + ".mkv");
         movie.setNotes("Notes " + id);
+        movie.setSynopsis("Synopsis " + id);
+        movie.setCastMembers("Actor One, Actor Two");
+        movie.setImdbUrl("https://www.imdb.com/title/tt000000" + id + "/");
+        movie.setTrailerUrl("https://example.com/trailers/" + id);
         movie.setCreatedAt(CREATED_AT);
         return movie;
     }
@@ -300,7 +305,12 @@ class MovieServiceTest {
                 watched,
                 rating,
                 "/movies/" + title + ".mkv",
-                notes, null
+                notes,
+                "A saved synopsis.",
+                "Actor One, Actor Two",
+                "https://www.imdb.com/title/tt0083658/",
+                "https://example.com/trailer",
+                null
         );
     }
 
@@ -317,6 +327,7 @@ class MovieServiceTest {
                 movie.getPersonalRating(),
                 movie.getFilePath(),
                 movie.getNotes(),
+                movie.getSynopsis(), movie.getCastMembers(), movie.getImdbUrl(), movie.getTrailerUrl(),
                 movie.getCreatedAt(), null
         );
     }
@@ -335,6 +346,10 @@ class MovieServiceTest {
         assertThat(movie.getPersonalRating()).isEqualTo(request.personalRating());
         assertThat(movie.getFilePath()).isEqualTo(request.filePath());
         assertThat(movie.getNotes()).isEqualTo(request.notes());
+        assertThat(movie.getSynopsis()).isEqualTo(request.synopsis());
+        assertThat(movie.getCastMembers()).isEqualTo(request.castMembers());
+        assertThat(movie.getImdbUrl()).isEqualTo(request.imdbUrl());
+        assertThat(movie.getTrailerUrl()).isEqualTo(request.trailerUrl());
     }
 
     private static void assertResponseMatchesRequest(
@@ -351,5 +366,9 @@ class MovieServiceTest {
         assertThat(response.personalRating()).isEqualTo(request.personalRating());
         assertThat(response.filePath()).isEqualTo(request.filePath());
         assertThat(response.notes()).isEqualTo(request.notes());
+        assertThat(response.synopsis()).isEqualTo(request.synopsis());
+        assertThat(response.castMembers()).isEqualTo(request.castMembers());
+        assertThat(response.imdbUrl()).isEqualTo(request.imdbUrl());
+        assertThat(response.trailerUrl()).isEqualTo(request.trailerUrl());
     }
 }

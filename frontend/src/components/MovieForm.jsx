@@ -14,19 +14,26 @@ const emptyMovie = {
   personalRating: '',
   filePath: '',
   notes: '',
+  synopsis: '',
+  castMembers: '',
+  imdbUrl: '',
+  trailerUrl: '',
   posterUrl: '',
 }
+
+const HTTP_URL = /^https?:\/\/\S+$/i
+const IMDB_TITLE_URL = /^https:\/\/(?:www\.)?imdb\.com\/title\/tt\d+\/?(?:[?#]\S*)?$/i
 
 const COPY = {
   en: {
     poster: 'Poster', posterUrl: 'Poster URL', posterUpload: 'Upload poster photo', posterHelp: 'Paste an HTTP(S) image URL or upload a PNG, JPEG, or WebP up to 256 KB. The image is saved in your database.', posterRemove: 'Remove poster', posterReading: 'Reading image…', posterUploaded: 'Uploaded image', posterInvalid: 'Use an HTTP(S) image URL or upload a PNG, JPEG, or WebP.', posterTooLarge: 'Choose an image no larger than 256 KB.', posterReadError: 'Could not read this image. Please choose it again.',
-    entry: 'Library entry', editMovie: 'Edit movie', addMovie: 'Add a movie', close: 'Close form', title: 'Title', releaseYear: 'Release year', runtime: 'Runtime (minutes)', director: 'Director', genre: 'Genre', genreExample: 'e.g. Science Fiction', language: 'Language', rating: 'Personal rating', filePath: 'File path', notes: 'Notes', optional: 'optional', watched: 'Watched', watchedHelp: 'Mark this title as completed', cancel: 'Cancel', saving: 'Saving…', saveChanges: 'Save changes', addToLibrary: 'Add to library',
-    titleRequired: 'Enter a title.', yearRange: 'Use a year from 1888 to 2100.', directorRequired: 'Enter a director.', genreRequired: 'Enter a genre.', runtimeRange: 'Use 1–1000 minutes.', languageRequired: 'Enter a language.', pathRequired: 'Enter where the movie is stored.', ratingRange: 'Use a rating from 0 to 10.'
+    entry: 'Library entry', editMovie: 'Edit movie', addMovie: 'Add a movie', close: 'Close form', title: 'Title', releaseYear: 'Release year', runtime: 'Runtime (minutes)', director: 'Director', genre: 'Genre', genreExample: 'e.g. Science Fiction', language: 'Language', rating: 'Personal rating', synopsis: 'Synopsis', cast: 'Cast', castHelp: 'Separate names with commas', imdbUrl: 'IMDb title URL', trailerUrl: 'Trailer URL', filePath: 'File path', notes: 'Notes', optional: 'optional', watched: 'Watched', watchedHelp: 'Mark this title as completed', cancel: 'Cancel', saving: 'Saving…', saveChanges: 'Save changes', addToLibrary: 'Add to library',
+    titleRequired: 'Enter a title.', yearRange: 'Use a year from 1888 to 2100.', directorRequired: 'Enter a director.', genreRequired: 'Enter a genre.', runtimeRange: 'Use 1–1000 minutes.', languageRequired: 'Enter a language.', pathRequired: 'Enter where the movie is stored.', ratingRange: 'Use a rating from 0 to 10.', imdbInvalid: 'Use an IMDb title URL such as https://www.imdb.com/title/tt0111161/.', trailerInvalid: 'Use an HTTP(S) trailer URL.'
   },
   zh: {
     poster: '海报', posterUrl: '海报网址', posterUpload: '上传海报图片', posterHelp: '填写 HTTP(S) 图片网址，或上传不超过 256 KB 的 PNG、JPEG 或 WebP 图片。图片会保存到你的数据库中。', posterRemove: '移除海报', posterReading: '正在读取图片…', posterUploaded: '已上传图片', posterInvalid: '请填写 HTTP(S) 图片网址，或上传 PNG、JPEG 或 WebP 图片。', posterTooLarge: '请选择不超过 256 KB 的图片。', posterReadError: '无法读取图片，请重新选择。',
-    entry: '片库条目', editMovie: '编辑电影', addMovie: '添加电影', close: '关闭表单', title: '片名', releaseYear: '上映年份', runtime: '时长（分钟）', director: '导演', genre: '类型', genreExample: '例如：科幻', language: '语言', rating: '个人评分', filePath: '文件路径', notes: '笔记', optional: '选填', watched: '已观看', watchedHelp: '将这部电影标记为已完成', cancel: '取消', saving: '正在保存…', saveChanges: '保存修改', addToLibrary: '加入片库',
-    titleRequired: '请输入片名。', yearRange: '年份必须在 1888 到 2100 之间。', directorRequired: '请输入导演。', genreRequired: '请输入类型。', runtimeRange: '时长必须在 1 到 1000 分钟之间。', languageRequired: '请输入语言。', pathRequired: '请输入电影存储位置。', ratingRange: '评分必须在 0 到 10 之间。'
+    entry: '片库条目', editMovie: '编辑电影', addMovie: '添加电影', close: '关闭表单', title: '片名', releaseYear: '上映年份', runtime: '时长（分钟）', director: '导演', genre: '类型', genreExample: '例如：科幻', language: '语言', rating: '个人评分', synopsis: '剧情简介', cast: '演员', castHelp: '请用逗号分隔姓名', imdbUrl: 'IMDb 电影链接', trailerUrl: '预告片链接', filePath: '文件路径', notes: '笔记', optional: '选填', watched: '已观看', watchedHelp: '将这部电影标记为已完成', cancel: '取消', saving: '正在保存…', saveChanges: '保存修改', addToLibrary: '加入片库',
+    titleRequired: '请输入片名。', yearRange: '年份必须在 1888 到 2100 之间。', directorRequired: '请输入导演。', genreRequired: '请输入类型。', runtimeRange: '时长必须在 1 到 1000 分钟之间。', languageRequired: '请输入语言。', pathRequired: '请输入电影存储位置。', ratingRange: '评分必须在 0 到 10 之间。', imdbInvalid: '请输入 IMDb 电影链接，例如 https://www.imdb.com/title/tt0111161/。', trailerInvalid: '请输入 HTTP(S) 预告片链接。'
   }
 }
 
@@ -89,6 +96,8 @@ export default function MovieForm({ language = 'en', movie, saving, serverErrors
     if (!values.language.trim()) next.language = copy.languageRequired
     if (!values.filePath.trim()) next.filePath = copy.pathRequired
     if (values.personalRating !== '' && (Number(values.personalRating) < 0 || Number(values.personalRating) > 10)) next.personalRating = copy.ratingRange
+    if (values.imdbUrl?.trim() && !IMDB_TITLE_URL.test(values.imdbUrl.trim())) next.imdbUrl = copy.imdbInvalid
+    if (values.trailerUrl?.trim() && !HTTP_URL.test(values.trailerUrl.trim())) next.trailerUrl = copy.trailerInvalid
     if (!isValidPoster(values.posterUrl?.trim())) next.posterUrl = copy.posterInvalid
     setErrors(next)
     return Object.keys(next).length === 0
@@ -103,6 +112,10 @@ export default function MovieForm({ language = 'en', movie, saving, serverErrors
       runtimeMinutes: Number(values.runtimeMinutes),
       personalRating: values.personalRating === '' ? null : Number(values.personalRating),
       notes: values.notes?.trim() || null,
+      synopsis: values.synopsis?.trim() || null,
+      castMembers: values.castMembers?.trim() || null,
+      imdbUrl: values.imdbUrl?.trim() || null,
+      trailerUrl: values.trailerUrl?.trim() || null,
       posterUrl: values.posterUrl?.trim() || null,
     })
   }
@@ -161,6 +174,30 @@ export default function MovieForm({ language = 'en', movie, saving, serverErrors
             <span>{copy.rating}</span>
             <input name="personalRating" type="number" min="0" max="10" step="0.1" value={values.personalRating} onChange={update} placeholder="0–10" />
             {fieldError('personalRating') && <small>{fieldError('personalRating')}</small>}
+          </label>
+
+          <label className="field field-wide">
+            <span>{copy.synopsis} <em>{copy.optional}</em></span>
+            <textarea name="synopsis" value={values.synopsis ?? ''} onChange={update} maxLength="5000" rows="5" />
+            {fieldError('synopsis') && <small>{fieldError('synopsis')}</small>}
+          </label>
+
+          <label className="field field-wide">
+            <span>{copy.cast} <em>{copy.optional}</em></span>
+            <textarea name="castMembers" value={values.castMembers ?? ''} onChange={update} maxLength="2000" rows="2" placeholder={copy.castHelp} />
+            {fieldError('castMembers') && <small>{fieldError('castMembers')}</small>}
+          </label>
+
+          <label className="field">
+            <span>{copy.imdbUrl} <em>{copy.optional}</em></span>
+            <input name="imdbUrl" type="url" value={values.imdbUrl ?? ''} onChange={update} maxLength="500" placeholder="https://www.imdb.com/title/tt…/" />
+            {fieldError('imdbUrl') && <small>{fieldError('imdbUrl')}</small>}
+          </label>
+
+          <label className="field">
+            <span>{copy.trailerUrl} <em>{copy.optional}</em></span>
+            <input name="trailerUrl" type="url" value={values.trailerUrl ?? ''} onChange={update} maxLength="500" placeholder="https://…" />
+            {fieldError('trailerUrl') && <small>{fieldError('trailerUrl')}</small>}
           </label>
 
           <label className="field field-wide">
