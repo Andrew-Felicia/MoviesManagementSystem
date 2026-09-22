@@ -184,24 +184,12 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
         </header>
         <div className="login-stage">
           <div className="login-copy">
-            <div className="login-coordinate"><span>01</span><span>{t.archiveCode}</span></div>
             <h1><span className="login-title-line">{t.manage}</span><em className="login-title-line">{t.yourFilms}</em></h1>
-            <p>{t.collectionBody}</p>
-            <div className="login-status-strip">
-              <span><i />{t.archiveStatus}</span>
-              <span>{t.curated}</span>
-              <span>{t.localFirst}</span>
-            </div>
-            <div className="login-command" aria-hidden="true"><span>framebase</span><code>catalog --open --private</code><b>↵</b></div>
           </div>
 
           <div className="login-artboard">
             <span className="artboard-label">FRAMEBASE®</span>
             <span className="artboard-index">001—003</span>
-            <div className="artboard-orbit" aria-hidden="true"><i /><i /><i /></div>
-            <div className="artboard-shape artboard-shape-one" aria-hidden="true" />
-            <div className="artboard-shape artboard-shape-two" aria-hidden="true" />
-            <div className="artboard-scan" aria-hidden="true" />
             <div className="login-poster-gallery" aria-label={t.posterGallery}>
               <figure className="classic-poster poster-shawshank">
                 <img src="/posters/reel/tt0111161.jpg" alt="The Shawshank Redemption, 1994 IMDb poster" width="300" height="444" />
