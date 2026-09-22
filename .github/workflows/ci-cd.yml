@@ -2,14 +2,14 @@ name: CI and container delivery
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, jetbrain]
   push:
-    branches: [main]
+    branches: [main, jetbrain]
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Pull-request runs may be superseded. Main-branch runs include production
+  # Pull-request runs may be superseded. Deployment-branch runs include production
   # deployment, so queue them to ensure a deployment is never interrupted.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -103,7 +103,7 @@ jobs:
 
   publish-image:
     name: Publish container image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jetbrain')
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -150,7 +150,7 @@ jobs:
 
   deploy-production:
     name: Deploy to production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jetbrain')
     needs: publish-image
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -207,7 +207,7 @@ jobs:
 
   promote-image:
     name: Promote deployed image to latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jetbrain')
     needs: [publish-image, deploy-production]
     runs-on: ubuntu-latest
     timeout-minutes: 10

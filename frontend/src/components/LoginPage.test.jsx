@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -14,15 +14,67 @@ describe('LoginPage', () => {
     render(<LoginPage busy={false} error="" onLogin={vi.fn()} />)
 
     expect(screen.getByRole('link', { name: 'Scroll to explore Framebase' })).toHaveAttribute('href', '#organize')
-    expect(screen.getByRole('heading', { name: /Everything worth watching/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Less searching/ })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Interactive movie poster book' })).toBeInTheDocument()
+    expect(document.querySelector('.book-section-number')).toHaveTextContent('02')
+    expect(document.querySelector('.showcase-index')).toHaveTextContent('03 / IMDb SELECTS')
     expect(screen.getByRole('heading', { name: 'Your films are waiting.' })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /Shawshank Redemption/ })).toHaveAttribute('src', expect.stringContaining('m.media-amazon.com'))
-    expect(screen.getByRole('img', { name: /Interstellar/ })).toHaveAttribute('src', expect.stringContaining('m.media-amazon.com'))
-    expect(screen.getByRole('img', { name: /The Godfather/ })).toHaveAttribute('src', expect.stringContaining('m.media-amazon.com'))
+    expect(screen.getByRole('img', { name: 'The Shawshank Redemption, 1994 IMDb poster' })).toHaveAttribute('src', '/posters/reel/tt0111161.jpg')
+    expect(screen.getByRole('img', { name: /Interstellar/ })).toHaveAttribute('src', '/posters/reel/tt0816692.jpg')
+    expect(screen.getByRole('img', { name: 'The Godfather, 1972 IMDb poster' })).toHaveAttribute('src', '/posters/reel/tt0068646.jpg')
+    expect(screen.getByRole('heading', { name: /Eight films/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Pulp Fiction on IMDb' })).toHaveAttribute('href', 'https://www.imdb.com/title/tt0110912/')
+    expect(screen.getByRole('img', { name: 'Pulp Fiction IMDb poster' })).toHaveAttribute('src', '/posters/reel/tt0110912.jpg')
+    expect(screen.queryByRole('heading', { name: /Catalog.*Watch.*Remember/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Animated movie poster reel' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Keep the reel moving.' })).not.toBeInTheDocument()
+    const reels = document.querySelectorAll('.closing-filmstrip')
+    expect(reels).toHaveLength(4)
+    const uniquePosters = new Set()
+    reels.forEach((reel) => {
+      const posters = Array.from(reel.querySelectorAll('img'), (image) => image.getAttribute('src'))
+      expect(posters).toHaveLength(30)
+      expect(new Set(posters).size).toBe(15)
+      posters.slice(0, 15).forEach((poster) => uniquePosters.add(poster))
+    })
+    expect(uniquePosters.size).toBe(60)
     expect(screen.queryByLabelText('Username')).not.toBeInTheDocument()
     await openLogin()
     expect(screen.getByLabelText('Username')).toHaveValue('admin')
+  })
+
+  it('turns persistent book leaves by swiping instead of clicking', async () => {
+    render(<LoginPage busy={false} error="" onLogin={vi.fn()} />)
+    const swipe = (from, to, pointerId) => {
+      for (const [type, clientX] of [['pointerdown', from], ['pointermove', to], ['pointerup', to]]) {
+        const event = new MouseEvent(type, { bubbles: true, button: 0, clientX })
+        Object.defineProperty(event, 'pointerId', { value: pointerId })
+        fireEvent(book, event)
+      }
+    }
+
+    const book = screen.getByRole('group', { name: 'Interactive movie poster book' })
+    expect(screen.getByRole('img', { name: 'Movie poster page 1' })).toHaveAttribute('src', expect.stringContaining('001-tt0111161.jpg'))
+    expect(screen.getByText('Spread 1 of 31')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /poster spread/i })).not.toBeInTheDocument()
+    expect(book.querySelectorAll('.book-leaf')).toHaveLength(3)
+    const firstLeaf = document.querySelector('.book-leaf')
+    const firstLeafPosters = Array.from(firstLeaf.querySelectorAll('img'), (image) => image.getAttribute('src'))
+
+    await userEvent.click(screen.getByRole('img', { name: 'Movie poster page 2' }))
+    expect(screen.getByText('Spread 1 of 31')).toBeInTheDocument()
+
+    swipe(520, 120, 1)
+    expect(screen.getByRole('img', { name: 'Movie poster page 3' })).toBeInTheDocument()
+    expect(screen.getByText('Spread 2 of 31')).toBeInTheDocument()
+
+    swipe(120, 520, 2)
+    expect(screen.getByRole('img', { name: 'Movie poster page 1' })).toBeInTheDocument()
+    expect(document.querySelector('.book-leaf')).toBe(firstLeaf)
+    expect(Array.from(firstLeaf.querySelectorAll('img'), (image) => image.getAttribute('src'))).toEqual(firstLeafPosters)
+
+    book.focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('img', { name: 'Movie poster page 3' })).toBeInTheDocument()
   })
 
   it('switches the landing page and login dialog between English and Chinese', async () => {

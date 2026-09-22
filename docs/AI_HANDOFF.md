@@ -74,7 +74,11 @@ Internet → BT Nginx (HTTPS) → localhost:8080 → app container → PostgreSQ
 - `frontend/src/components/LoginPage.jsx` is the public landing/login surface.
 - It supports English and Chinese. New visible text must be added to both
   language dictionaries.
-- The three classic-poster images live under `frontend/public/posters/`.
+- Landing-page poster images are local frontend assets. The interactive book
+  discovers images in `frontend/src/assets/posters/books/` automatically; its
+  folder README documents supported formats, ordering, and deployment.
+- The hero, showcase, and animated reel use images from
+  `frontend/public/posters/reel/`.
 - Login/landing animations live in `frontend/src/styles.css`. Avoid putting a
   blur filter on the poster gallery itself: it can leave browser-rasterized
   poster images looking soft after the entrance animation.

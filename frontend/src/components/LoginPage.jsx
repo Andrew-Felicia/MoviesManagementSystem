@@ -1,6 +1,12 @@
-import { useState } from 'react'
-import { ArrowDown, Check, Clock3, Eye, EyeOff, Film, KeyRound, Languages, LockKeyhole, Search, ShieldCheck, Star, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ArrowDown, Eye, EyeOff, KeyRound, Languages, LockKeyhole, ShieldCheck, X } from 'lucide-react'
 import { BrandMark } from './Icons'
+
+const BOOK_POSTER_MODULES = import.meta.glob('../assets/posters/books/*.{avif,jpeg,jpg,png,webp}', {
+  eager: true,
+  import: 'default',
+  query: '?url'
+})
 
 const COPY = {
   en: {
@@ -8,11 +14,9 @@ const COPY = {
     archiveCode: 'Private archive / 2026', archiveStatus: 'Archive online', curated: 'Curated by you', localFirst: 'Personal · searchable · private', selectedFilms: 'Selected films', indexMode: 'Index mode', personalCatalog: 'Personal catalog', accessReady: 'Access node ready', secureSession: 'Encrypted session handshake',
     manage: 'Manage', yourFilms: 'Your films', posterGallery: 'Classic cinema poster gallery', scrollLabel: 'Scroll to explore Framebase', scroll: 'Scroll to explore',
     collectionEyebrow: 'Your collection, in focus', collectionTitle: 'Everything worth watching.', collectionAccent: 'Easy to find again.', collectionBody: 'Framebase turns a scattered list of files and memories into one searchable, personal film index.',
-    exampleIndex: 'Example movie index', searchLibrary: 'Search your library', threeTitles: '3 titles', scienceFiction: 'Science Fiction', crime: 'Crime', thriller: 'Thriller', watchlist: 'Watchlist', watched: 'Watched',
-    featuresEyebrow: 'Built around your movie nights', featuresTitle: 'Less searching.', featuresAccent: 'More watching.',
-    featureOneTitle: 'Keep one catalog', featureOneBody: 'Save titles, directors, genres, languages, runtimes, and the location of every movie file.',
-    featureTwoTitle: 'Track every watch', featureTwoBody: 'See what you have finished, what is still waiting, and how much time you have spent watching.',
-    featureThreeTitle: 'Remember your favorites', featureThreeBody: 'Add personal ratings and notes so the films that stayed with you never disappear into the list.',
+    bookLabel: 'Interactive movie poster book', bookInstructions: 'Swipe left or right across the book to turn a page. Use the left and right arrow keys for keyboard navigation.', bookProgress: (current, total) => `Spread ${current} of ${total}`,
+    showcaseEyebrow: 'From the IMDb archive', showcaseTitle: 'Eight films.', showcaseAccent: 'Infinite inspiration.', showcaseBody: 'A rotating wall of landmark films to spark the next addition to your personal index.', openImdb: (title) => `Open ${title} on IMDb`,
+    posterReelLabel: 'Animated movie poster reel',
     privateEyebrow: 'Private by design', ctaTitle: 'Your films are waiting.', ctaBody: 'Sign in to open your collection, or create an account to start a new one.', openFramebase: 'Open Framebase', footer: 'Your collection. Your ratings. Your next movie.', backToTop: 'Back to top',
     closeLogin: 'Close login', newMember: 'New member access', securePortal: 'Secure member portal', createAccount: 'Create account', welcomeBack: 'Welcome back',
     registerIntro: 'Choose a username and passcode for your library access.', loginIntro: 'Sign in to continue to the movie library.', username: 'Username', passcode: 'Passcode', password: 'Password', confirmPasscode: 'Confirm passcode',
@@ -24,11 +28,9 @@ const COPY = {
     archiveCode: '私人片库 / 2026', archiveStatus: '片库在线', curated: '由你策展', localFirst: '私人 · 可搜索 · 重视隐私', selectedFilms: '精选电影', indexMode: '索引模式', personalCatalog: '私人目录', accessReady: '访问节点已就绪', secureSession: '加密会话握手',
     manage: '管理', yourFilms: '你的电影', posterGallery: '经典电影海报画廊', scrollLabel: '向下探索 Framebase', scroll: '向下探索',
     collectionEyebrow: '你的收藏，一目了然', collectionTitle: '每一部值得观看的电影。', collectionAccent: '都能轻松再次找到。', collectionBody: 'Framebase 将散落的电影文件与观影记忆，整理成一个可搜索的私人电影索引。',
-    exampleIndex: '电影索引示例', searchLibrary: '搜索你的片库', threeTitles: '3 部电影', scienceFiction: '科幻', crime: '犯罪', thriller: '惊悚', watchlist: '待观看', watched: '已观看',
-    featuresEyebrow: '为你的电影之夜而生', featuresTitle: '少一点搜索。', featuresAccent: '多一点观影。',
-    featureOneTitle: '建立统一片库', featureOneBody: '集中保存片名、导演、类型、语言、时长，以及每个电影文件的位置。',
-    featureTwoTitle: '记录每次观看', featureTwoBody: '随时查看已经看完的电影、仍在等待的片单，以及累计观影时间。',
-    featureThreeTitle: '记住你的最爱', featureThreeBody: '添加个人评分与笔记，让真正打动你的电影永远不会淹没在列表中。',
+    bookLabel: '可翻页电影海报书', bookInstructions: '在书上向左或向右滑动即可翻页，也可使用左右方向键。', bookProgress: (current, total) => `第 ${current} 组，共 ${total} 组`,
+    showcaseEyebrow: '来自 IMDb 电影档案', showcaseTitle: '八部电影。', showcaseAccent: '无限灵感。', showcaseBody: '一面持续流动的经典电影墙，为你的私人索引带来下一次收藏灵感。', openImdb: (title) => `在 IMDb 查看《${title}》`,
+    posterReelLabel: '电影海报动画长卷',
     privateEyebrow: '隐私优先设计', ctaTitle: '你的电影正在等你。', ctaBody: '登录即可打开你的收藏，或者创建账户，开始建立新的片库。', openFramebase: '打开 Framebase', footer: '你的收藏。你的评分。你的下一部电影。', backToTop: '返回顶部',
     closeLogin: '关闭登录窗口', newMember: '新用户入口', securePortal: '安全用户入口', createAccount: '创建账户', welcomeBack: '欢迎回来',
     registerIntro: '选择用户名和口令，创建你的片库账户。', loginIntro: '登录以继续进入电影片库。', username: '用户名', passcode: '口令', password: '密码', confirmPasscode: '确认口令',
@@ -36,6 +38,34 @@ const COPY = {
     alreadyAccount: '已经有账户？', newToFramebase: '第一次使用 Framebase？', backToSignIn: '返回登录', createAnAccount: '创建账户', passcodeHelp: '口令会经过安全哈希处理，绝不会以可读文本保存。'
   }
 }
+
+const SHOWCASE_MOVIES = [
+  { title: 'Pulp Fiction', year: 1994, director: 'Quentin Tarantino', imdbUrl: 'https://www.imdb.com/title/tt0110912/', posterUrl: '/posters/reel/tt0110912.jpg' },
+  { title: 'Fight Club', year: 1999, director: 'David Fincher', imdbUrl: 'https://www.imdb.com/title/tt0137523/', posterUrl: '/posters/reel/tt0137523.jpg' },
+  { title: 'The Matrix', year: 1999, director: 'Lana Wachowski', imdbUrl: 'https://www.imdb.com/title/tt0133093/', posterUrl: '/posters/reel/tt0133093.jpg' },
+  { title: 'The Return of the King', year: 2003, director: 'Peter Jackson', imdbUrl: 'https://www.imdb.com/title/tt0167260/', posterUrl: '/posters/reel/tt0167260.jpg' },
+  { title: 'Whiplash', year: 2014, director: 'Damien Chazelle', imdbUrl: 'https://www.imdb.com/title/tt2582802/', posterUrl: '/posters/reel/tt2582802.jpg' },
+  { title: 'Blade Runner 2049', year: 2017, director: 'Denis Villeneuve', imdbUrl: 'https://www.imdb.com/title/tt1856101/', posterUrl: '/posters/reel/tt1856101.jpg' },
+  { title: 'The Dark Knight', year: 2008, director: 'Christopher Nolan', imdbUrl: 'https://www.imdb.com/title/tt0468569/', posterUrl: '/posters/reel/tt0468569.jpg' },
+  { title: 'Mad Max: Fury Road', year: 2015, director: 'George Miller', imdbUrl: 'https://www.imdb.com/title/tt1392190/', posterUrl: '/posters/reel/tt1392190.jpg' },
+]
+
+const REEL_POSTER_ROWS = [
+  ['tt0111161', 'tt0068646', 'tt0468569', 'tt0071562', 'tt0050083', 'tt0167260', 'tt0110912', 'tt0108052', 'tt1375666', 'tt0137523', 'tt0120737', 'tt0109830', 'tt0167261', 'tt0133093', 'tt0099685'],
+  ['tt0080684', 'tt0073486', 'tt8503618', 'tt0816692', 'tt0120815', 'tt0120689', 'tt0114369', 'tt0102926', 'tt0038650', 'tt7286456', 'tt2582802', 'tt1675434', 'tt0482571', 'tt0407887', 'tt0253474'],
+  ['tt0172495', 'tt0120586', 'tt0114814', 'tt0110357', 'tt0103064', 'tt0088763', 'tt0054215', 'tt0034583', 'tt0027977', 'tt0021749', 'tt6148156', 'tt5074352', 'tt4633694', 'tt4154796', 'tt4154756'],
+  ['tt2380307', 'tt1853728', 'tt1345836', 'tt1187043', 'tt0910970', 'tt0405094', 'tt0209144', 'tt0087843', 'tt0082971', 'tt0081505', 'tt0078788', 'tt0057012', 'tt0051201', 'tt0050825', 'tt0047396'],
+].map((row) => row.map((imdbId) => `/posters/reel/${imdbId}.jpg`))
+
+const DISCOVERED_BOOK_POSTERS = Object.entries(BOOK_POSTER_MODULES)
+  .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }))
+  .map(([, posterUrl]) => posterUrl)
+const BOOK_POSTERS = DISCOVERED_BOOK_POSTERS.length % 2 === 0 ? DISCOVERED_BOOK_POSTERS : [...DISCOVERED_BOOK_POSTERS, null]
+const BOOK_SPREAD_COUNT = Math.ceil(BOOK_POSTERS.length / 2)
+const BOOK_LEAVES = Array.from({ length: BOOK_SPREAD_COUNT - 1 }, (_, index) => ({
+  front: BOOK_POSTERS[index * 2 + 1],
+  back: BOOK_POSTERS[index * 2 + 2]
+}))
 
 const CHINESE_SERVER_ERRORS = {
   'Invalid username or password': '用户名或密码错误',
@@ -52,6 +82,9 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
   const [showPassword, setShowPassword] = useState(false)
   const [formError, setFormError] = useState('')
   const [success, setSuccess] = useState('')
+  const [bookSpread, setBookSpread] = useState(0)
+  const [bookDragOffset, setBookDragOffset] = useState(0)
+  const bookPointer = useRef(null)
 
   async function submit(event) {
     event.preventDefault()
@@ -88,9 +121,49 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
     onClearError()
   }
 
+  function turnBook(direction) {
+    const nextSpread = bookSpread + direction
+    if (nextSpread < 0 || nextSpread >= BOOK_SPREAD_COUNT) return
+    setBookSpread(nextSpread)
+  }
+
+  function startBookTurn(event) {
+    if (event.button !== undefined && event.button !== 0) return
+    const pageWidth = Math.max(event.currentTarget.getBoundingClientRect().width / 2, 280)
+    bookPointer.current = { pointerId: event.pointerId, startX: event.clientX, deltaX: 0, pageWidth }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+
+  function moveBookTurn(event) {
+    if (!bookPointer.current || bookPointer.current.pointerId !== event.pointerId) return
+    let deltaX = event.clientX - bookPointer.current.startX
+    if ((bookSpread === 0 && deltaX > 0) || (bookSpread === BOOK_SPREAD_COUNT - 1 && deltaX < 0)) deltaX = 0
+    deltaX = Math.max(-bookPointer.current.pageWidth, Math.min(bookPointer.current.pageWidth, deltaX))
+    bookPointer.current.deltaX = deltaX
+    setBookDragOffset(deltaX)
+  }
+
+  function finishBookTurn(event) {
+    if (!bookPointer.current || bookPointer.current.pointerId !== event.pointerId) return
+    const { deltaX, pageWidth } = bookPointer.current
+    bookPointer.current = null
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+    setBookDragOffset(0)
+
+    if (Math.abs(deltaX) > Math.max(58, pageWidth * .16)) {
+      turnBook(deltaX < 0 ? 1 : -1)
+    }
+  }
+
+  function cancelBookTurn() {
+    bookPointer.current = null
+    setBookDragOffset(0)
+  }
+
   const registering = mode === 'register'
   const t = COPY[language]
   const visibleError = language === 'zh' ? (CHINESE_SERVER_ERRORS[error] || error) : error
+  const dragPageWidth = bookPointer.current?.pageWidth || 280
 
   return (
     <main className="login-page" lang={t.locale}>
@@ -131,15 +204,15 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
             <div className="artboard-scan" aria-hidden="true" />
             <div className="login-poster-gallery" aria-label={t.posterGallery}>
               <figure className="classic-poster poster-shawshank">
-                <img src="https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="The Shawshank Redemption, 1994 IMDb poster" width="300" height="444" />
+                <img src="/posters/reel/tt0111161.jpg" alt="The Shawshank Redemption, 1994 IMDb poster" width="300" height="444" />
                 <figcaption><strong>The Shawshank Redemption</strong><span>Frank Darabont · 1994</span></figcaption>
               </figure>
               <figure className="classic-poster poster-interstellar">
-                <img src="https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg" alt="Interstellar, 2014 IMDb poster" width="300" height="444" />
+                <img src="/posters/reel/tt0816692.jpg" alt="Interstellar, 2014 IMDb poster" width="300" height="444" />
                 <figcaption><strong>Interstellar</strong><span>Christopher Nolan · 2014</span></figcaption>
               </figure>
               <figure className="classic-poster poster-godfather">
-                <img src="https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg" alt="The Godfather, 1972 IMDb poster" width="300" height="444" />
+                <img src="/posters/reel/tt0068646.jpg" alt="The Godfather, 1972 IMDb poster" width="300" height="444" />
                 <figcaption><strong>The Godfather</strong><span>Francis Ford Coppola · 1972</span></figcaption>
               </figure>
             </div>
@@ -154,33 +227,80 @@ export default function LoginPage({ busy, error, language = 'en', onLanguageChan
         </a>
       </section>
 
-      <section className="landing-section landing-intro" id="organize">
-        <div className="landing-heading">
-          <span className="landing-section-number" aria-hidden="true">02 / 04</span>
-          <span className="eyebrow">{t.collectionEyebrow}</span>
-          <h2>{t.collectionTitle}<br /><em>{t.collectionAccent}</em></h2>
-          <p>{t.collectionBody}</p>
-        </div>
+      <section className="landing-section landing-book" id="organize" aria-label={t.bookLabel}>
+        <span className="landing-section-number book-section-number" aria-hidden="true">02</span>
+        <div
+          className="poster-book"
+          role="group"
+          aria-label={t.bookLabel}
+          tabIndex={0}
+          data-dragging={bookDragOffset !== 0}
+          onPointerDown={startBookTurn}
+          onPointerMove={moveBookTurn}
+          onPointerUp={finishBookTurn}
+          onPointerCancel={cancelBookTurn}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowLeft') { event.preventDefault(); turnBook(-1) }
+            if (event.key === 'ArrowRight') { event.preventDefault(); turnBook(1) }
+          }}
+        >
+          <span className="sr-only">{t.bookInstructions}</span>
+          <span className="sr-only" aria-live="polite">{t.bookProgress(bookSpread + 1, BOOK_SPREAD_COUNT)}</span>
+          <div className="book-shell">
+            <div className="book-base book-base-left" aria-hidden={bookSpread !== 0}>
+              {bookSpread < 3 && <img src={BOOK_POSTERS[0]} alt="Movie poster page 1" width="300" height="444" draggable={false} decoding="async" />}
+            </div>
+            <div className="book-base book-base-right" aria-hidden={bookSpread !== BOOK_SPREAD_COUNT - 1}>
+              {bookSpread > BOOK_SPREAD_COUNT - 4 && BOOK_POSTERS[BOOK_POSTERS.length - 1] && <img src={BOOK_POSTERS[BOOK_POSTERS.length - 1]} alt={`Movie poster page ${BOOK_POSTERS.length}`} width="300" height="444" draggable={false} decoding="async" />}
+            </div>
+            {BOOK_LEAVES.map((leaf, index) => {
+              if (index < bookSpread - 2 || index > bookSpread + 2) return null
+              const turned = index < bookSpread
+              const activeNext = bookDragOffset < 0 && index === bookSpread
+              const activePrevious = bookDragOffset > 0 && index === bookSpread - 1
+              const active = activeNext || activePrevious
+              let angle = turned ? -180 : 0
+              if (activeNext) angle = Math.max(-178, (bookDragOffset / dragPageWidth) * 180)
+              if (activePrevious) angle = Math.min(-2, -180 + (bookDragOffset / dragPageWidth) * 180)
+              const curl = active ? Math.sin(Math.abs(angle) * Math.PI / 180) : 0
+              const zIndex = active ? BOOK_LEAVES.length * 3 : (turned ? index + 1 : BOOK_LEAVES.length * 2 - index)
 
-        <div className="landing-index" aria-label={t.exampleIndex}>
-          <div className="landing-index-toolbar"><span className="index-window-dots" aria-hidden="true"><i /><i /><i /></span><Search size={16} /><span>{t.searchLibrary}</span><small>{t.threeTitles}</small></div>
-          <div className="landing-index-row" data-index="001"><span className="landing-poster blue">A</span><div><strong>Arrival</strong><small>Denis Villeneuve · 2016</small></div><span>{t.scienceFiction}</span><em><Star size={13} />9.2</em></div>
-          <div className="landing-index-row" data-index="002"><span className="landing-poster amber">H</span><div><strong>Heat</strong><small>Michael Mann · 1995</small></div><span>{t.crime}</span><em>{t.watchlist}</em></div>
-          <div className="landing-index-row" data-index="003"><span className="landing-poster green">P</span><div><strong>Parasite</strong><small>Bong Joon Ho · 2019</small></div><span>{t.thriller}</span><em><Check size={13} />{t.watched}</em></div>
+              return <article
+                className={`book-leaf${active ? ' is-active' : ''}`}
+                data-turned={turned}
+                key={`${leaf.front}-${leaf.back}`}
+                style={{ '--leaf-angle': `${angle}deg`, '--curl-opacity': .14 + curl * .62, zIndex }}
+              >
+                <figure className="book-face book-face-front" aria-hidden={bookSpread !== index}>
+                  <img src={leaf.front} alt={`Movie poster page ${index * 2 + 2}`} width="300" height="444" draggable={false} decoding="async" />
+                </figure>
+                <figure className="book-face book-face-back" aria-hidden={bookSpread !== index + 1}>
+                  <img src={leaf.back} alt={`Movie poster page ${index * 2 + 3}`} width="300" height="444" draggable={false} decoding="async" />
+                </figure>
+              </article>
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="landing-section landing-features" aria-labelledby="features-title">
-        <div className="landing-heading compact">
-          <span className="landing-section-number" aria-hidden="true">03 / 04</span>
-          <span className="eyebrow">{t.featuresEyebrow}</span>
-          <h2 id="features-title">{t.featuresTitle}<br /><em>{t.featuresAccent}</em></h2>
+      <section className="cinema-showcase" aria-labelledby="showcase-title">
+        <header className="showcase-heading">
+          <div><span className="showcase-index">03 / IMDb SELECTS</span><span className="eyebrow">{t.showcaseEyebrow}</span><h2 id="showcase-title">{t.showcaseTitle}<br /><em>{t.showcaseAccent}</em></h2></div>
+          <p>{t.showcaseBody}</p>
+        </header>
+        <div className="poster-showcase-grid">
+          {SHOWCASE_MOVIES.map((movie, index) => <a className="showcase-poster" href={movie.imdbUrl} target="_blank" rel="noreferrer" aria-label={t.openImdb(movie.title)} key={movie.imdbUrl} style={{ '--poster-index': index }}>
+            <figure><img src={movie.posterUrl} alt={`${movie.title} IMDb poster`} width="300" height="444" loading="eager" decoding="async" /><span>{String(index + 1).padStart(2, '0')}</span></figure>
+            <div><strong>{movie.title}</strong><small>{movie.director} · {movie.year}</small></div>
+          </a>)}
         </div>
-        <div className="feature-list">
-          <article><span className="feature-number">01</span><Film size={23} /><div><h3>{t.featureOneTitle}</h3><p>{t.featureOneBody}</p><span className="feature-signal" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
-          <article><span className="feature-number">02</span><Clock3 size={23} /><div><h3>{t.featureTwoTitle}</h3><p>{t.featureTwoBody}</p><span className="feature-signal delay-one" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
-          <article><span className="feature-number">03</span><Star size={23} /><div><h3>{t.featureThreeTitle}</h3><p>{t.featureThreeBody}</p><span className="feature-signal delay-two" aria-hidden="true"><i /><i /><i /><i /><i /></span></div></article>
-        </div>
+        <div className="showcase-marquee" aria-hidden="true"><span>CINEMA / MEMORY / INDEX / CINEMA / MEMORY / INDEX / CINEMA / MEMORY / INDEX / CINEMA / MEMORY / INDEX /</span></div>
+      </section>
+
+      <section className="closing-reel" aria-label={t.posterReelLabel}>
+        {REEL_POSTER_ROWS.map((posters, row) => <div className={`closing-filmstrip closing-filmstrip-${row + 1}`} aria-hidden="true" key={row}>
+          <div>{[...posters, ...posters].map((posterUrl, index) => <figure key={`${posterUrl}-${index}`}><img src={posterUrl} alt="" width="300" height="444" loading="lazy" /></figure>)}</div>
+        </div>)}
       </section>
 
       <section className="landing-cta">

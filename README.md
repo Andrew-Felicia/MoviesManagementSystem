@@ -23,6 +23,11 @@ assistant, read [docs/AI_HANDOFF.md](docs/AI_HANDOFF.md).
 The React frontend is in `frontend/`. During development, Vite forwards
 `/api` requests to the Spring Boot application on port 8080.
 
+The landing-page book reads its pages automatically from
+`frontend/src/assets/posters/books/`. See
+[frontend/src/assets/posters/books/README.md](frontend/src/assets/posters/books/README.md)
+before adding, replacing, removing, or reordering book posters.
+
 ```bash
     # terminal 1
     cd backend
